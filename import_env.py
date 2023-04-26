@@ -24,9 +24,10 @@ def get_subfolders(path, **kw):
     ext = kw.get('ext', '.py')
     depth = kw.get('depth', 1)
     omissions = [path + '/%s'%e if '/' not in e else e for e in omissions]
-    inclusions = [path + '/%s'%e if '/' not in e else e for e in inclusions]
+    if( inclusions != None ):
+        inclusions = [path + '/%s'%e if '/' not in e else e for e in inclusions]
     try:
-        cmd = r'find %s -maxdepth %d -type d'%(path, depth)
+        cmd = r'find %s -maxdepth %d -mindepth %d -type d'%(path, depth, depth)
         u = sco(cmd)
         u = [e for e in u \
             if not e.split('/')[-1].startswith('__') \
@@ -46,10 +47,10 @@ def get_local_modules(path, **kw):
     local = kw.get('local', True)
     ext = kw.get('ext', '.py')
     res = sco(
-        r'find %s -type f -name "*%s" -maxdepth 1'%(path, ext)
+        r'find %s -type f -name "*%s" -mindepth 1 -maxdepth 1'%(path, ext)
     )
     res2 = sco(
-        r'find %s -type f -name "*%sx" -maxdepth 1'%(path, ext)
+        r'find %s -type f -name "*%sx" -mindepth 1 -maxdepth 1'%(path, ext)
     )
     [res.append(e) for e in res2]
     res = [e for e in res if \
@@ -74,17 +75,22 @@ def init_modules(path, **kw):
     s = '__all__ = [\n'
     for e in local_modules:
         s += '    "%s",\n'%e
-    s = s[:-2]
-    s += '\n]\n'
+    if( s == "__all__ = [\n" ):
+        s += ']\n'
+    else:
+        s = s[:-2]
+        s += '\n]\n'
     if( unload ):
         s += 'from . import *'
-    if( not root ):
+    if( True ):
         filename = path + '/__init__.py'
-        with open(filename, 'w') as f: 
+        with open(filename, 'w') as f:
+            print('Write to "%s"\n"%s"'%(filename, s)) 
             f.write(s)
 
     global_subfolders = ['%s/%s'%(path,e) for e in subfolders]
     kw['root'] = False
+    kw['inclusions'] = None
     for e in global_subfolders:
         init_modules(e, **kw)
 
