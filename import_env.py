@@ -24,6 +24,7 @@ def get_subfolders(path, **kw):
     ext = kw.get('ext', '.py')
     depth = kw.get('depth', 1)
     omissions = [path + '/%s'%e if '/' not in e else e for e in omissions]
+    inclusions = [path + '/%s'%e if '/' not in e else e for e in inclusions]
     try:
         cmd = r'find %s -maxdepth %d -type d'%(path, depth)
         u = sco(cmd)
