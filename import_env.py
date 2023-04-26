@@ -35,7 +35,7 @@ def get_subfolders(path, **kw):
         u = []
     if( len(omissions) > 0 or inclusions != None ):
         if( inclusions != None ):
-            [omissions.append(e) for e not in inclusions] 
+            [omissions.append(e) for e in u if e not in inclusions] 
         u = [e for e in u if e not in omissions] 
     if( local ):
         u = [get_local_name(e, ext) for e in u]
