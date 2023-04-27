@@ -47,10 +47,10 @@ def get_local_modules(path, **kw):
     local = kw.get('local', True)
     ext = kw.get('ext', '.py')
     res = sco(
-        r'find %s -type f -name "*%s" -mindepth 1 -maxdepth 1'%(path, ext)
+        r'find %s -mindepth 1 -maxdepth 1 -type f -name "*%s"'%(path, ext)
     )
     res2 = sco(
-        r'find %s -type f -name "*%sx" -mindepth 1 -maxdepth 1'%(path, ext)
+        r'find %s -mindepth 1 -maxdepth 1 -type f -name "*%sx"'%(path, ext)
     )
     [res.append(e) for e in res2]
     res = [e for e in res if \
