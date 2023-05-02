@@ -81,7 +81,7 @@ def init_modules(path, **kw):
         s = s[:-2]
         s += '\n]\n'
     if( unload ):
-        v = u.translate(str.maketrans("", "", ' \n"')) \
+        v = s.translate(str.maketrans("", "", ' \n"')) \
             .split("[")[1] \
             .split("]")[0] \
             .split(",")
