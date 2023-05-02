@@ -86,7 +86,7 @@ def init_modules(path, **kw):
             .split("]")[0] \
             .split(",")
         for e in v:
-            s += 'from .%s import *'%e
+            s += 'from .%s import *\n'%e
 #        s += 'from . import *'
     if( True ):
         filename = path + '/__init__.py'
