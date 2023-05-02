@@ -81,7 +81,13 @@ def init_modules(path, **kw):
         s = s[:-2]
         s += '\n]\n'
     if( unload ):
-        s += 'from . import *'
+        v = u.translate(str.maketrans("", "", ' \n"')) \
+            .split("[")[1] \
+            .split("]")[0] \
+            .split(",")
+        for e in v:
+            s += 'from .%s import *'%e
+#        s += 'from . import *'
     if( True ):
         filename = path + '/__init__.py'
         with open(filename, 'w') as f:
