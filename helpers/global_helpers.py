@@ -1,6 +1,8 @@
 from subprocess import check_output as co
 import os
 import numpy as np
+import subprocess
+import re
 
 #global helpers tyler
 def sco(s, split=True):
@@ -61,4 +63,12 @@ def segment_quad_intersect(a, b, face):
     else:
         return inside_quad(a, face), a
 
-        
+def get_dependencies():# Run the grep command using subprocess
+    grep_command = "grep -rE '^(import|from .* import)' --include='*.py' ."
+    result = sco(grep_command)
+   
+    final = []
+    for line in result:
+        l = line.split(':')[1].split(' ')[1]
+        if( l not in final ): final.append(l)
+    return final 
