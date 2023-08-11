@@ -43,6 +43,6 @@ def set_color_plot(
     plt.title(title, color=title_color)
 
 def set_color_plot_global(**kw):
-    def helper(the_title,the_title_color):
-        set_color_plot(title=the_title, title_color=the_title_color, **kw)
+    def helper(title,*,title_color='white'):
+        set_color_plot(title=title, title_color=title_color, **kw)
     return helper
