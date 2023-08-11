@@ -16,10 +16,10 @@ def setup_gg_plot(*, clr_out='black', clr_in='white'):
 
 def set_color_plot(
     *, 
-    axis_color='white'
+    axis_color='white',
     leg_edge_color='white',
     leg_label_color='white',
-    tick_color='white'
+    tick_color='white',
     title_color='white',
     xlabel='',
     ylabel='',
