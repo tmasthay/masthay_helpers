@@ -39,7 +39,8 @@ def set_color_plot(*,
         )
     if( use_colorbar ):
         plt.colorbar()
-    plt.grid(use_grid)
+    if( use_grid ):
+        plt.grid(use_grid)
     plt.title(title, color=title_color)
 
 def set_color_plot_global(**kw):
