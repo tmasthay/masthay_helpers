@@ -1,4 +1,4 @@
-# masthay_helpers
+# Masthay Helpers
 
 ![Masthay Helpers](worker_bees_logo.jpg)
 
