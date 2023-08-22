@@ -7,16 +7,9 @@ implementation across projects.
 
 ## Table of Contents
 - [Installation](#installation)
-- [Usage](#usage)
-- [Features](#features)
-- [Contributing](#contributing)
-- [License](#license)
-- [Credits](#credits)
 
 ## Installation
-
-Describe the installation process. For Python projects, this usually means:
-
+Right now, I only support linux, but if you have linux, it's just a simple
+install.
 ```bash
-pip install your_project_name
-
+pip install masthay_helpers
