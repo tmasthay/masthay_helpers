@@ -12,7 +12,7 @@ extensions = [
 ]
 
 setup(
-    name="helpers",
+    name="masthay_helpers",
     version="0.1",
     author="Tyler Masthay",
     description="Helper functions for repetitive and useful tasks",
