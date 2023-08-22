@@ -1,5 +1,7 @@
 # Project Name
 
+![Masthay Helpers](worker_bees_logo.jpg)
+
 This is a project for various helper functions to avoid repetitive 
 implementation across projects.
 
