@@ -16,6 +16,7 @@ setup(
     version="0.1",
     author="Tyler Masthay",
     description="Helper functions for repetitive and useful tasks",
+    python_requires=">=3.10",
     packages=find_packages(),
     install_requires=["numpy", "matplotlib"],
     ext_modules=cythonize(extensions, compiler_directives={"language_level": "3"}),
