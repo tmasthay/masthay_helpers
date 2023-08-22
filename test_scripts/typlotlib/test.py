@@ -29,7 +29,12 @@ config_plot(
     'Identity',
     title_color='white',
     exclude_keys=['use_colorbar', 'colorbar_kw'],
-    appendage={'tick_color': rand_color()}
+    appendage={'tick_color': rand_color()},
+    commands=[
+        lambda: plt.xlabel('Hyper specific exception'),
+        lambda: plt.ylabel('Another hyper specific exception'),
+        lambda: plt.title('Let us show that we can change the title if needed')
+    ]
 )
 plt.savefig('identity.jpg')
 plt.clf()

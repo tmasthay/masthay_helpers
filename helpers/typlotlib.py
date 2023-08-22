@@ -67,9 +67,12 @@ def set_color_plot_global(**kw):
         *,
         title_color='white', 
         exclude_keys=[],
-        appendage={}
+        appendage={},
+        commands=[]
     ):
         kwargs = {k: kw[k] for k in kw if k not in exclude_keys}
         kwargs = {**kwargs, **appendage}
         set_color_plot(title=the_title, title_color=title_color, **kwargs)
+        for cmd in commands:
+            cmd()
     return helper
