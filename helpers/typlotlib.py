@@ -62,6 +62,14 @@ def set_color_plot(*,
     plt.title(title, color=title_color)
 
 def set_color_plot_global(**kw):
-    def helper(the_title,*,title_color='white'):
-        set_color_plot(title=the_title, title_color=title_color, **kw)
+    def helper(
+        the_title,
+        *,
+        title_color='white', 
+        exclude_keys=[],
+        appendage={}
+    ):
+        kwargs = {k: kw[k] for k in kw if k not in exclude_keys}
+        kwargs = {**kwargs, **appendage}
+        set_color_plot(title=the_title, title_color=title_color, **kwargs)
     return helper

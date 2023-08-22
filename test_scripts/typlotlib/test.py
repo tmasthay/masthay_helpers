@@ -24,4 +24,15 @@ config_plot('Random Image')
 plt.savefig('random.jpg')
 plt.clf()
 
+plt.plot(range(10), range(10))
+config_plot(
+    'Identity',
+    title_color='white',
+    exclude_keys=['use_colorbar', 'colorbar_kw'],
+    appendage={'tick_color': rand_color()}
+)
+plt.savefig('identity.jpg')
+plt.clf()
+
 os.system('code random.jpg')
+os.system('code identity.jpg')
