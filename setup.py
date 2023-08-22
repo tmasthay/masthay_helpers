@@ -1,5 +1,7 @@
 from setuptools import setup, find_packages
 
+# https://pypi.org/project/masthay-helpers/
+
 setup(
     name="masthay_helpers",
     version="0.1",
