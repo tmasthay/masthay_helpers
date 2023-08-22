@@ -1,9 +1,9 @@
 # Masthay Helpers
 
-[![Masthay Helpers](https://edibleaspen.ediblecommunities.com/sites/default/files/images/article/hive-1.jpg)](https://edibleaspen.ediblecommunities.com/drink/hive-mind)
+[![Masthay Helpers](https://edibleaspen.ediblecommunities.com/sites/default/files/images/article/hive-1.jpg)](https://en.wikipedia.org/wiki/Worker_bee#Worker_activities)
 
-This is a project for various helper functions to avoid repetitive 
-implementation across projects.
+This is a project for various helper functions to increase efficiency.
+Think of it like a collection of [worker bees with different roles](https://en.wikipedia.org/wiki/Worker_bee#Worker_activities).
 
 ## Table of Contents
 - [Installation](#installation)
