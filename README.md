@@ -1,6 +1,6 @@
 # Masthay Helpers
 
-![Masthay Helpers](worker_bees_logo.jpg)
+![Masthay Helpers](https://github.com/tmasthay/masthay_helpers/worker_bees_logo.jpg)
 
 This is a project for various helper functions to avoid repetitive 
 implementation across projects.
