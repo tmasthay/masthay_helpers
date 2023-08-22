@@ -1,6 +1,6 @@
 # Masthay Helpers
 
-<!-- ![Masthay Helpers](https://edibleaspen.ediblecommunities.com/sites/default/files/images/article/hive-1.jpg) -->
+![Masthay Helpers](https://edibleaspen.ediblecommunities.com/sites/default/files/images/article/hive-1.jpg)
 
 This is a project for various helper functions to avoid repetitive 
 implementation across projects.
