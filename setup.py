@@ -1,5 +1,4 @@
 from setuptools import setup, find_packages
-from setuptools.extension import Extension
 
 setup(
     name="masthay_helpers",
