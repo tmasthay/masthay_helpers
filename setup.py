@@ -4,8 +4,8 @@ from Cython.Build import cythonize
 
 extensions = [
     Extension(
-        "helpers.global_helpers_cython",
-        sources=["helpers/global_helpers_cython.pyx"],
+        "masthay_helpers.global_helpers_cython",
+        sources=["masthay_helpers/global_helpers_cython.pyx"],
         extra_compile_args=["-O3"],
         extra_link_args=["-O3"],
     )

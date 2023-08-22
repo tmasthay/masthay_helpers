@@ -1,4 +1,4 @@
-from helpers.typlotlib import *
+from masthay_helpers.typlotlib import *
 import matplotlib.pyplot as plt
 import os
 
