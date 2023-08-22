@@ -48,7 +48,7 @@ def set_color_plot(*,
         default_cbar_kw = {
             'label': '',
             'color': 'white', 
-            'labelcolor': 'red'
+            'labelcolor': 'white'
         }
         colorbar_kw = {**default_cbar_kw, **colorbar_kw}
         cbar.set_label(**filt_dict(colorbar_kw, ['labelcolor']))

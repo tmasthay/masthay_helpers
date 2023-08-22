@@ -14,7 +14,7 @@ config_plot = set_color_plot_global(
     use_legend=False,
     use_grid=False,
     use_colorbar=True,
-    colorbar_kw={'label': 'Randomness', 'color': 'white'},
+    colorbar_kw={'label': 'Some unit of measurement', 'color': 'white'},
 )
 
 
