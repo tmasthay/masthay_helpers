@@ -1,6 +1,7 @@
 # Project Name
 
-Short project description. What is the purpose of the project? What problems does it solve?
+This is a project for various helper functions to avoid repetitive 
+implementation across projects.
 
 ![Optional: Image or GIF showcasing your project](path_to_image_or_gif)
 
