@@ -1,23 +1,27 @@
-from helpers.typlotlib import \
-    pre_colors, \
-    rand_color, \
-    setup_gg_plot, \
-    set_color_plot, \
-    set_color_plot_global
+from helpers.typlotlib import *
 import matplotlib.pyplot as plt
+import os
 
 # Create a figure
 setup_gg_plot(clr_out='black', clr_in='black', figsize=(10,10))
+config_plot = set_color_plot_global(
+    axis_color='white',
+    leg_edge_color='white',
+    leg_label_color='white',
+    tick_color='white',
+    xlabel='',
+    ylabel='',
+    use_legend=False,
+    use_grid=False,
+    use_colorbar=True,
+    colorbar_kw={'label': 'Randomness', 'color': 'white'},
+)
+
 
 # Create a plot
-plt.plot([1,2,3,4,5], [1,2,3,4,5], label='line 1')
-plt.savefig('1.jpg')
+plt.imshow(np.random.random((100,100)))
+config_plot('Random Image')
+plt.savefig('random.jpg')
 plt.clf()
 
-plt.plot([1,2,3,4,5], [1,4,9,16,25], label='line 2')
-plt.savefig('2.jpg')
-plt.clf()
-
-plt.plot([1,2,3,4,5], [1,8,27,64,125], label='line 3')
-plt.savefig('3.jpg')
-plt.clf()
+os.system('code random.jpg')

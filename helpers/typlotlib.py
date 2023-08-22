@@ -26,8 +26,14 @@ def set_color_plot(*,
     title='',
     use_legend=False,
     use_grid=False,
-    use_colorbar=False
+    use_colorbar=False,
+    colorbar_kw={}
 ):
+    def filt_dict(d, exclude_keys, include=False):
+        if( include ):
+            return {k: v for k, v in d.items() if k in exclude_keys}
+        return {k: v for k, v in d.items() if k not in exclude_keys}
+    
     plt.xlabel(xlabel, color=axis_color)
     plt.ylabel(ylabel, color=axis_color)
     plt.xticks(color=tick_color)
@@ -38,11 +44,21 @@ def set_color_plot(*,
             labelcolor=leg_label_color
         )
     if( use_colorbar ):
-        plt.colorbar()
+        cbar = plt.colorbar()
+        default_cbar_kw = {
+            'label': '',
+            'color': 'white', 
+            'labelcolor': 'red'
+        }
+        colorbar_kw = {**default_cbar_kw, **colorbar_kw}
+        cbar.set_label(**filt_dict(colorbar_kw, ['labelcolor']))
+        plt.setp(
+            plt.getp(cbar.ax.axes, 'yticklabels'), 
+            color=colorbar_kw['labelcolor']
+        )
 
-    if( use_grid ):
-        plt.grid(visible=use_grid)
-        
+    plt.grid(visible=use_grid)
+
     plt.title(title, color=title_color)
 
 def set_color_plot_global(**kw):
