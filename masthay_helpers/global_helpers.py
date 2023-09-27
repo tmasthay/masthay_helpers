@@ -104,7 +104,7 @@ def prettify_dict(d, jsonify=True):
     return res
 
 
-def save_metadata_to_file(func):
+def save_metadata(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
         import os
