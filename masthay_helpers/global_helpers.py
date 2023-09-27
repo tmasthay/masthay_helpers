@@ -72,3 +72,25 @@ def get_dependencies():# Run the grep command using subprocess
         l = line.split(':')[1].split(' ')[1]
         if( l not in final ): final.append(l)
     return final 
+
+def prettify_dict(d, jsonify=True):
+    s = str(d)
+    s = re.sub(r'<function (\w+) at 0x[\da-f]+>', r'\1', s)
+    s = s.replace('{', '{\n')
+    s = s.replace('}', '\n}')
+    s = s.replace(', ', ',\n')
+    lines = s.split('\n')
+    idt = 4 * ' '
+    idt_level = 0
+    for i, l in enumerate(lines):
+        if l in ['}', '},', ',']:
+            idt_level -= 1
+            if idt_level < 0:
+                idt_level = 0
+        lines[i] = idt_level * idt + l
+        if l[-1] == '{':
+            idt_level += 1
+    res = '\n'.join(lines)
+    if jsonify:
+        res = res.replace("'", '"')
+    return res
