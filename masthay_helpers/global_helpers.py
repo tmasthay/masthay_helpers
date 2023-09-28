@@ -128,7 +128,9 @@ def save_metadata(*, path=None, cli=False):
                     else os.path.dirname(os.path.abspath(__file__))
                 )
 
-            with open(os.path.join(save_path, 'metadata.pydict'), 'w') as f:
+            full_path = os.path.join(save_path, 'metadata.pydict')
+            input(f'Saving metadata to {full_path}...')
+            with open(full_path, 'w') as f:
                 f.write(prettify_dict(meta))
 
             return meta
