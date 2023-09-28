@@ -117,7 +117,7 @@ def save_metadata(*, path=None, cli=False):
             if cli:
                 parser = argparse.ArgumentParser()
                 parser.add_argument(
-                    '--root', type=str, help='Path for storing metadata'
+                    '--store_path', type=str, help='Path for storing metadata'
                 )
                 args = parser.parse_args()
                 save_path = args.store_path
@@ -127,11 +127,19 @@ def save_metadata(*, path=None, cli=False):
                     if path is not None
                     else os.path.dirname(os.path.abspath(__file__))
                 )
-
+            print(
+                f'save_metadata attempting create folder {save_path}...', end=''
+            )
+            os.makedirs(save_path, exist_ok=True)
+            print('SUCCESS')
             full_path = os.path.join(save_path, 'metadata.pydict')
-            input(f'Saving metadata to {full_path}...')
+            print(
+                f'save_metadata attempting to save metadata to {full_path}...',
+                end='',
+            )
             with open(full_path, 'w') as f:
                 f.write(prettify_dict(meta))
+            print('SUCCESS')
 
             return meta
 
@@ -144,3 +152,10 @@ def add_root_package_path(*, path, pkg):
     path_tokens = path.split(os.sep)
     global_root = os.sep.join(path_tokens[: path_tokens.index(pkg)])
     sys.path.append(global_root)
+
+
+def path_up(path, n=1):
+    if path[-1] == os.sep:
+        path = path[:-1]
+    path_tokens = path.split(os.sep)
+    return os.sep.join(path_tokens[:-n])
