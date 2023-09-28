@@ -4,6 +4,7 @@ import numpy as np
 import subprocess
 import re
 from functools import wraps
+import sys
 
 
 # global helpers tyler
@@ -116,3 +117,9 @@ def save_metadata(func):
         return meta
 
     return wrapper
+
+
+def add_root_package_path(pkg_name):
+    path_tokens = os.path.dirname(__file__).split(os.sep)
+    global_root = os.sep.join(path_tokens[: path_tokens.index(pkg_name)])
+    sys.path.append(global_root)
