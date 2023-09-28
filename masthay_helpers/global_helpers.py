@@ -5,6 +5,7 @@ import subprocess
 import re
 from functools import wraps
 import sys
+import argparse
 
 
 # global helpers tyler
@@ -105,18 +106,36 @@ def prettify_dict(d, jsonify=True):
     return res
 
 
-def save_metadata(func):
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        import os
+def save_metadata(*, path=None, cli=False):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            import os
 
-        meta = func(*args, **kwargs)
-        curr_dir = os.path.dirname(os.path.abspath(__file__))
-        with open(os.path.join(curr_dir, 'metadata.pydict'), 'w') as f:
-            f.write(prettify_dict(meta))
-        return meta
+            meta = func(*args, **kwargs)
 
-    return wrapper
+            if cli:
+                parser = argparse.ArgumentParser()
+                parser.add_argument(
+                    '--root', type=str, help='Path for storing metadata'
+                )
+                args = parser.parse_args()
+                save_path = args.store_path
+            else:
+                save_path = (
+                    path
+                    if path is not None
+                    else os.path.dirname(os.path.abspath(__file__))
+                )
+
+            with open(os.path.join(save_path, 'metadata.pydict'), 'w') as f:
+                f.write(prettify_dict(meta))
+
+            return meta
+
+        return wrapper
+
+    return decorator
 
 
 def add_root_package_path(*, path, pkg):

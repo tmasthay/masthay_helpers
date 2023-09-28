@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="masthay_helpers",
-    version="0.2.13",
+    version="0.2.14",
     author="Tyler Masthay",
     description="Helper functions for repetitive and useful tasks",
     long_description=open('README.md').read(),
