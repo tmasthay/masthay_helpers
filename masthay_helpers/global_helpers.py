@@ -119,7 +119,7 @@ def save_metadata(func):
     return wrapper
 
 
-def add_root_package_path(pkg_name):
-    path_tokens = os.path.dirname(__file__).split(os.sep)
-    global_root = os.sep.join(path_tokens[: path_tokens.index(pkg_name)])
+def add_root_package_path(*, path, pkg):
+    path_tokens = path.split(os.sep)
+    global_root = os.sep.join(path_tokens[: path_tokens.index(pkg)])
     sys.path.append(global_root)
