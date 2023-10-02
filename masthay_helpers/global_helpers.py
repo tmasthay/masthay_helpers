@@ -161,7 +161,41 @@ def path_up(path, n=1):
     return os.sep.join(path_tokens[:-n])
 
 
-def local_var_name(tmp, calling_context):
+def justify_lines(lines, demarcator='&', align='ljust', extra_space=0):
+    # Step (1)
+    l = [line.split(demarcator) for line in lines]
+
+    # Step (2)
+    l = [[ee.strip() for ee in e] for e in l]
+
+    # Step (3)
+    if not all(len(e) == len(l[0]) for e in l):
+        raise ValueError(
+            "All lines must have the same number of elements after splitting."
+        )
+
+    # Step (4)
+    if align.lower() not in ['ljust', 'rjust']:
+        raise ValueError("Invalid align argument. Must be 'ljust' or 'rjust'.")
+
+    # Determine max lengths for each column
+    max_lengths = [max(len(e[j]) for e in l) for j in range(len(l[0]))]
+
+    formatted_lines = []
+    for e in l:
+        formatted_line = []
+        for j, text in enumerate(e):
+            max_length = max_lengths[j]
+            formatted_text = getattr(text, align.lower())(
+                max_length + extra_space
+            )
+            formatted_line.append(formatted_text)
+        formatted_lines.append(' '.join(formatted_line))
+
+    return "\n".join(formatted_lines)
+
+
+def var_name(tmp, calling_context):
     address = id(tmp)
     res = []
     for k, v in calling_context.items():
