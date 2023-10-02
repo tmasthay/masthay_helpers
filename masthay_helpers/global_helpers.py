@@ -17,7 +17,7 @@ def sco(s, split=True):
 
 
 def conda_include_everything():
-    inc_paths = ':'.join(sco('find $CONDA_PREFIX/include -type d'))
+    inc_paths = ':'.join(sco('find $CONDA_PREFIX/inclugetde -type d'))
     c_path = os.environ.get("C_INCLUDE_PATH")
     cmd = "echo 'export C_INCLUDE_PATH=%s:%s'" % (c_path, inc_paths)
     cmd += ' | pbcopy'
@@ -159,3 +159,12 @@ def path_up(path, n=1):
         path = path[:-1]
     path_tokens = path.split(os.sep)
     return os.sep.join(path_tokens[:-n])
+
+
+def local_var_name(tmp, calling_context):
+    address = id(tmp)
+    res = []
+    for k, v in calling_context.items():
+        if id(v) == address:
+            res.append(k)
+    return res
