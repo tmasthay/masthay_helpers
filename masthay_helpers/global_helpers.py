@@ -202,3 +202,19 @@ def var_name(tmp, calling_context):
         if id(v) == address:
             res.append(k)
     return res
+
+
+def var_unique_name(tmp, calling_context):
+    names = var_name(tmp, calling_context)
+    if len(names) > 1:
+        raise ValueError(
+            'Multiple names for variable with debug info below\n'
+            f'    id={id(tmp)}\n'
+            f'    possible_names={names}\n'
+            f'    calling_context={calling_context}'
+        )
+    return names[0]
+
+
+def get_var(var_name, calling_context):
+    return calling_context.get(var_name, None)
