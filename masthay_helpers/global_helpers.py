@@ -6,6 +6,7 @@ import re
 from functools import wraps
 import sys
 import argparse
+import textwrap
 
 
 # global helpers tyler
@@ -180,3 +181,38 @@ def var_unique_name(tmp, calling_context):
 
 def get_var(var_name, calling_context):
     return calling_context.get(var_name, None)
+
+
+def istr(*args, idt_level=0, idt_str='    ', cpl=80):
+    wrapper = textwrap.TextWrapper(width=cpl)
+    s = ''.join(args)
+    word_list = wrapper.wrap(text=s)
+    base_idt = idt_str * idt_level
+    full_idt = base_idt + idt_str
+    res = base_idt + word_list[0]
+    for line in word_list[1:]:
+        res += '\n' + full_idt + line
+    return res
+
+
+def iprint(*args, idt_level=0, idt_str='    ', cpl=80, **kw):
+    print(istr(*args, idt_level=idt_level, idt_str=idt_str, cpl=cpl), **kw)
+
+
+def iraise(error_type, *args, idt_level=0, idt_str='    ', cpl=80):
+    raise error_type(istr(*args, idt_level=idt_level, idt_str=idt_str, cpl=cpl))
+
+
+def ireraise(e, *args, idt_level=0, idt_str='    ', cpl=80, idt_further=True):
+    msg = str(e) + '\n'
+    exception_type = type(e)
+    full = istr(msg, idt_level=idt_level, idt_str=idt_str, cpl=cpl)
+    if idt_further:
+        idt_level += 1
+    full += (
+        '\n'
+        + cpl * '*'
+        + istr(*args, idt_level=idt_level, idt_str=idt_str, cpl=cpl)
+        + cpl * '*'
+    )
+    raise exception_type(full)
