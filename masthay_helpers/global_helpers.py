@@ -202,22 +202,6 @@ def get_var(var_name, calling_context):
 
 
 def istr(*args, idt_level=0, idt_str='    ', cpl=80):
-    # delimiter = GlobalHelpers.get_delimiter(s)
-    # if delimiter is None:
-    #     print(
-    #         "WARNING: string is pathologically complicated...returning raw"
-    #         " string"
-    #     )
-    #     return ''.join(args)
-    # elif len(delimiter) > 1:
-    #     print(
-    #         'WARNING: dummy delimiter used in implementation is'
-    #         f' {len(delimiter)} characters long.\n'
-    #         '   Column width may be off'
-    #         f' by up to {len(delimiter) - 1} characters.'
-    #     )
-    # width = cpl - len(idt_str) * (idt_level + 1) + len(delimiter) - 1
-
     wrapper = textwrap.TextWrapper(
         width=cpl,
         replace_whitespace=False,
@@ -226,20 +210,6 @@ def istr(*args, idt_level=0, idt_str='    ', cpl=80):
     )
     lines = wrapper.wrap(''.join(args))
     return '\n'.join(lines)
-    # lines []
-    # wrapper = textwrap.TextWrapper(width=width)
-    # s = s.replace('\n', delimiter)
-    # tmp = wrapper.wrap(text=s)
-    # word_list = []
-    # for e in tmp:
-    #     word_list.extend(e.split(delimiter))
-    # input(word_list)
-    # base_idt = idt_str * idt_level
-    # full_idt = base_idt + idt_str
-    # res = base_idt + word_list[0]
-    # for line in word_list[1:]:
-    #     res += '\n' + full_idt + line
-    # return res
 
 
 def iprint(*args, idt_level=0, idt_str='    ', cpl=80, **kw):
