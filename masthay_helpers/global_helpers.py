@@ -11,7 +11,7 @@ from itertools import product
 
 
 class GlobalHelpers:
-    delimiter_choices = ['', '!', '@', '#', '$', '%', '^', '&', '*']
+    delimiter_choices = ['', '@', '#', '%', '^', '&', '*']
     for a, b, c, d in product(delimiter_choices, repeat=4):
         u = a + b + c + d
         if u not in delimiter_choices:
@@ -202,14 +202,32 @@ def get_var(var_name, calling_context):
 
 
 def istr(*args, idt_level=0, idt_str='    ', cpl=80):
+    def dummy_endline(i, x):
+        if '\n' not in x:
+            return ''
+        n = cpl - len(x) - idt_level * len(idt_str) - 1
+        if i > 0:
+            n -= len(idt_str)
+        delimiter = GlobalHelpers.get_delimiter(x)
+        extra = n * delimiter
+        extra = extra[:n] + ' '
+        return extra
+
+    delimiters = [dummy_endline(i, e) for i, e in enumerate(args)]
+    args = [e.replace('\n', '') + d for e, d in zip(args, delimiters)]
+
     wrapper = textwrap.TextWrapper(
         width=cpl,
         replace_whitespace=False,
         initial_indent=idt_level * idt_str,
         subsequent_indent=(idt_level + 1) * idt_str,
     )
-    lines = wrapper.wrap(''.join(args))
-    return '\n'.join(lines)
+    res = '\n'.join(wrapper.wrap(''.join(args)))
+
+    for e in delimiters:
+        res = res.replace(e.replace(' ', ''), '')
+
+    return res
 
 
 def iprint(*args, idt_level=0, idt_str='    ', cpl=80, **kw):
