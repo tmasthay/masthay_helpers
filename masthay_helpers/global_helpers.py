@@ -7,6 +7,24 @@ from functools import wraps
 import sys
 import argparse
 import textwrap
+from itertools import product
+
+
+class GlobalHelpers:
+    delimiter_choices = ['', '!', '@', '#', '$', '%', '^', '&', '*']
+    for a, b, c, d in product(delimiter_choices, repeat=4):
+        u = a + b + c + d
+        if u not in delimiter_choices:
+            delimiter_choices.append(a + b + c + d)
+    delimiter_choices = [e for e in delimiter_choices if e != '']
+    delimiter_choices.sort(key=len)
+
+    @staticmethod
+    def get_delimiter(s):
+        for d in GlobalHelpers.delimiter_choices:
+            if d not in s:
+                return d
+        return None
 
 
 # global helpers tyler
@@ -184,9 +202,29 @@ def get_var(var_name, calling_context):
 
 
 def istr(*args, idt_level=0, idt_str='    ', cpl=80):
-    wrapper = textwrap.TextWrapper(width=cpl)
     s = ''.join(args)
-    word_list = wrapper.wrap(text=s)
+    delimiter = GlobalHelpers.get_delimiter(s)
+    if delimiter is None:
+        print(
+            "WARNING: string is pathologically complicated...returning raw"
+            " string"
+        )
+        return ''.join(args)
+    elif len(delimiter) > 1:
+        print(
+            'WARNING: dummy delimiter used in implementation is'
+            f' {len(delimiter)} characters long.\n'
+            '   Column width may be off'
+            f' by up to {len(delimiter) - 1} characters.'
+        )
+    width = cpl - len(idt_str) * (idt_level) + len(delimiter) - 1
+
+    wrapper = textwrap.TextWrapper(width=width)
+    s = s.replace('\n', delimiter)
+    tmp = wrapper.wrap(text=s)
+    word_list = []
+    for e in tmp:
+        word_list.extend(e.split(delimiter))
     base_idt = idt_str * idt_level
     full_idt = base_idt + idt_str
     res = base_idt + word_list[0]
@@ -196,7 +234,10 @@ def istr(*args, idt_level=0, idt_str='    ', cpl=80):
 
 
 def iprint(*args, idt_level=0, idt_str='    ', cpl=80, **kw):
-    print(istr(*args, idt_level=idt_level, idt_str=idt_str, cpl=cpl), **kw)
+    print(
+        istr(*args, idt_level=idt_level, idt_str=idt_str, cpl=cpl),
+        **kw,
+    )
 
 
 def iraise(error_type, *args, idt_level=0, idt_str='    ', cpl=80):
