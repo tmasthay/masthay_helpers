@@ -201,7 +201,9 @@ def get_var(var_name, calling_context):
     return calling_context.get(var_name, None)
 
 
-def istr(*args, idt_level=0, idt_str='    ', cpl=80):
+def istr(*args, l=0, idt_str='    ', cpl=80):
+    idt_level = l
+
     def dummy_endline(i, x):
         if '\n' not in x:
             return ''
@@ -213,8 +215,33 @@ def istr(*args, idt_level=0, idt_str='    ', cpl=80):
         extra = extra[:n] + ' '
         return extra
 
-    delimiters = [dummy_endline(i, e) for i, e in enumerate(args)]
-    args = [e.replace('\n', '') + d for e, d in zip(args, delimiters)]
+    args1 = []
+    for e in args:
+        u = e.split('\n')
+        for i in range(len(u) - 1):
+            u[i] = u[i] + '\n'
+        args1.extend(u)
+
+    args2 = []
+    for e in args1:
+        if len(e) < cpl:
+            args2.append(e)
+        else:
+            tokens = e.split(' ')
+            args2.append('')
+            total = 0
+            for t in tokens:
+                if total + len(t) > cpl:
+                    args2.append(t)
+                    total = len(t)
+                else:
+                    args2[-1] += t
+                    total += len(t)
+                    if total < cpl:
+                        args2[-1] += ' '
+                        total += 1
+    delimiters = [dummy_endline(i, e) for i, e in enumerate(args2)]
+    args = [e.replace('\n', '') + d for e, d in zip(args2, delimiters)]
 
     wrapper = textwrap.TextWrapper(
         width=cpl,
@@ -222,6 +249,10 @@ def istr(*args, idt_level=0, idt_str='    ', cpl=80):
         initial_indent=idt_level * idt_str,
         subsequent_indent=(idt_level + 1) * idt_str,
     )
+
+    if 'comment' in args:
+        input('yoyoyo')
+        input(args)
     res = '\n'.join(wrapper.wrap(''.join(args)))
 
     for e in delimiters:
@@ -230,21 +261,68 @@ def istr(*args, idt_level=0, idt_str='    ', cpl=80):
     return res
 
 
-def iprint(*args, idt_level=0, idt_str='    ', cpl=80, **kw):
+def iprints(*args, l=0, idt_str='    ', cpl=80, **kw):
     print(
-        istr(*args, idt_level=idt_level, idt_str=idt_str, cpl=cpl),
+        istr(*args, l=l, idt_str=idt_str, cpl=cpl),
         **kw,
     )
 
 
-def iraise(error_type, *args, idt_level=0, idt_str='    ', cpl=80):
-    raise error_type(istr(*args, idt_level=idt_level, idt_str=idt_str, cpl=cpl))
+def iprintl(*args, l=0, idt_str='    ', cpl=80, sep='\n', **kw):
+    args = [istr(e, l=l, idt_str=idt_str, cpl=cpl) for e in args]
+    print('\n'.join(args), sep=sep, **kw)
 
 
-def ireraise(e, *args, idt_level=0, idt_str='    ', cpl=80, idt_further=True):
+def iprintt(*args, l=0, idt_str='    ', cpl=80, sep='\n', **kw):
+    args1 = []
+    for arg in args:
+        if isinstance(arg, str):
+            args1.append(istr(arg, l=l, idt_str=idt_str, cpl=cpl))
+        elif isinstance(arg, tuple):
+            if len(arg) != 2:
+                raise ValueError(
+                    'Tuple must have length 2. USAGE: (string,'
+                    ' local_indent_level)'
+                )
+            args1.append(
+                istr(
+                    arg[0],
+                    l=l + arg[1],
+                    idt_str=idt_str,
+                    cpl=cpl,
+                )
+            )
+        else:
+            raise ValueError(
+                'Arguments must be strings or tuples. USAGE: (string,'
+                ' local_indent_level). If only string is passed, local_indent'
+                ' level is assumed to be equal to kwarg l, which you have'
+                f' passed l={l}.'
+            )
+    print(*args1, sep=sep, **kw)
+
+
+def iprint(*args, l=0, idt_str='    ', cpl=80, sep='\n', mode='auto', **kw):
+    if mode == 'auto':
+        iprintt(*args, l=l, idt_str=idt_str, cpl=cpl, sep=sep, **kw)
+    elif mode == 'lines':
+        iprintl(*args, l=l, idt_str=idt_str, cpl=cpl, sep=sep, **kw)
+    elif mode == 'string':
+        iprints(*args, l=l, idt_str=idt_str, cpl=cpl, sep=sep, **kw)
+    else:
+        raise ValueError(
+            f'Invalid mode {mode}. Choose from [auto, lines, string]'
+        )
+
+
+def iraise(error_type, *args, l=0, idt_str='    ', cpl=80):
+    raise error_type(istr(*args, l=l, idt_str=idt_str, cpl=cpl))
+
+
+def ireraise(e, *args, l=0, idt_str='    ', cpl=80, idt_further=True):
     msg = str(e) + '\n'
     exception_type = type(e)
-    full = istr(msg, idt_level=idt_level, idt_str=idt_str, cpl=cpl)
+    full = istr(msg, l=l, idt_str=idt_str, cpl=cpl)
     if idt_further:
         idt_level += 1
     full += (
