@@ -8,6 +8,7 @@ import sys
 import argparse
 import textwrap
 from itertools import product
+import black
 
 
 class GlobalHelpers:
@@ -55,27 +56,63 @@ def get_dependencies():  # Run the grep command using subprocess
     return final
 
 
-def prettify_dict(d, jsonify=True):
-    s = str(d)
-    s = re.sub(r"<function (\w+) at 0x[\da-f]+>", r"\1", s)
-    s = s.replace("{", "{\n")
-    s = s.replace("}", "\n}")
-    s = s.replace(", ", ",\n")
-    lines = s.split("\n")
-    idt = 4 * " "
-    idt_level = 0
-    for i, l in enumerate(lines):
-        if l in ["}", "},", ","]:
-            idt_level -= 1
-            if idt_level < 0:
-                idt_level = 0
-        lines[i] = idt_level * idt + l
-        if l[-1] == "{":
-            idt_level += 1
-    res = "\n".join(lines)
-    if jsonify:
-        res = res.replace("'", '"')
-    return res
+# def prettify_dict(d, jsonify=True):
+#     s = str(d)
+#     s = re.sub(r"<function (\w+) at 0x[\da-f]+>", r"\1", s)
+#     s = s.replace("{", "{\n")
+#     s = s.replace("}", "\n}")
+#     s = s.replace(", ", ",\n")
+#     lines = s.split("\n")
+#     idt = 4 * " "
+#     idt_level = 0
+#     for i, l in enumerate(lines):
+#         if l in ["}", "},", ","]:
+#             idt_level -= 1
+#             if idt_level < 0:
+#                 idt_level = 0
+#         lines[i] = idt_level * idt + l
+#         if l[-1] == "{":
+#             idt_level += 1
+#     res = "\n".join(lines)
+#     if jsonify:
+#         res = res.replace("'", '"')
+#     return res
+
+
+def format_with_black(
+    code: str,
+    line_length: int = 80,
+    preview: bool = True,
+    magic_trailing_comma: bool = False,
+    string_normalization: bool = False,
+) -> str:
+    try:
+        mode = black.FileMode(
+            line_length=line_length,
+            preview=preview,
+            magic_trailing_comma=magic_trailing_comma,
+            string_normalization=string_normalization,
+        )
+        formatted_code = black.format_str(code, mode=mode)
+        return formatted_code
+    except black.NothingChanged:
+        return code
+
+
+def prettify_dict(
+    d,
+    line_length=80,
+    preview=True,
+    magic_trailing_comma=False,
+    string_normalization=False,
+):
+    return format_with_black(
+        str(d),
+        line_length=line_length,
+        preview=preview,
+        magic_trailing_comma=magic_trailing_comma,
+        string_normalization=string_normalization,
+    )
 
 
 def save_metadata(*, path=None, cli=False):
@@ -357,18 +394,56 @@ def call_counter_obj(func):
     return wrapper
 
 
-def call_counter(_verbose=0, postprocess=nothing, return_counter=False):
+def call_counter(verbose=0, postprocess=nothing, return_counter=False):
     def decorator(func):
         def wrapper(*args, **kwargs):
             wrapper.calls += 1
             res = func(*args, **kwargs)
-            postprocess(return_val=res, calls=wrapper.calls, verbose=_verbose)
+            postprocess(
+                return_val=res, calls=wrapper.calls, verbose=wrapper.verbose
+            )
             if return_counter:
                 return res, wrapper.calls
             else:
                 return res
 
         wrapper.calls = 0
+        wrapper.verbose = verbose
         return wrapper
 
     return decorator
+
+
+class DotDict:
+    def __init__(self, d):
+        for k, v in d.items():
+            setattr(self, k, v)
+
+    def set(self, k, v):
+        setattr(self, k, v)
+
+    def get(self, k):
+        return getattr(self, k)
+
+    def keys(self):
+        return self.__dict__.keys()
+
+    def items(self):
+        return self.__dict__.items()
+
+    def values(self):
+        return self.__dict__.values()
+
+    def has(self, k):
+        return hasattr(self, k)
+
+    def has_all(self, *keys):
+        return all([self.has(k) for k in keys])
+
+    def has_all_type(self, *keys, lcl_type=None):
+        return all(
+            [self.has(k) and type(self.get(k)) is lcl_type for k in keys]
+        )
+
+    def str(self):
+        return prettify_dict(self.__dict__)
