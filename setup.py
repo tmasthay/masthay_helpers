@@ -4,10 +4,10 @@ from setuptools import setup, find_packages
 
 setup(
     name="masthay_helpers",
-    version="0.2.32",
+    version="0.2.33",
     author="Tyler Masthay",
     description="Helper functions for repetitive and useful tasks",
-    long_description=open('README.md').read(),
+    long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
     python_requires=">=3.10",
     packages=find_packages(),

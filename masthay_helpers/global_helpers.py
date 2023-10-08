@@ -11,12 +11,12 @@ from itertools import product
 
 
 class GlobalHelpers:
-    delimiter_choices = ['', '@', '#', '%', '^', '&', '*']
+    delimiter_choices = ["", "@", "#", "%", "^", "&", "*"]
     for a, b, c, d in product(delimiter_choices, repeat=4):
         u = a + b + c + d
         if u not in delimiter_choices:
             delimiter_choices.append(a + b + c + d)
-    delimiter_choices = [e for e in delimiter_choices if e != '']
+    delimiter_choices = [e for e in delimiter_choices if e != ""]
     delimiter_choices.sort(key=len)
 
     @staticmethod
@@ -29,17 +29,17 @@ class GlobalHelpers:
 
 # global helpers tyler
 def sco(s, split=True):
-    u = co(s, shell=True).decode('utf-8')
+    u = co(s, shell=True).decode("utf-8")
     if split:
-        u = u.split('\n')[:-1]
+        u = u.split("\n")[:-1]
     return u
 
 
 def conda_include_everything():
-    inc_paths = ':'.join(sco('find $CONDA_PREFIX/inclugetde -type d'))
+    inc_paths = ":".join(sco("find $CONDA_PREFIX/inclugetde -type d"))
     c_path = os.environ.get("C_INCLUDE_PATH")
     cmd = "echo 'export C_INCLUDE_PATH=%s:%s'" % (c_path, inc_paths)
-    cmd += ' | pbcopy'
+    cmd += " | pbcopy"
     os.system(cmd)
 
 
@@ -49,7 +49,7 @@ def get_dependencies():  # Run the grep command using subprocess
 
     final = []
     for line in result:
-        l = line.split(':')[1].split(' ')[1]
+        l = line.split(":")[1].split(" ")[1]
         if l not in final:
             final.append(l)
     return final
@@ -57,22 +57,22 @@ def get_dependencies():  # Run the grep command using subprocess
 
 def prettify_dict(d, jsonify=True):
     s = str(d)
-    s = re.sub(r'<function (\w+) at 0x[\da-f]+>', r'\1', s)
-    s = s.replace('{', '{\n')
-    s = s.replace('}', '\n}')
-    s = s.replace(', ', ',\n')
-    lines = s.split('\n')
-    idt = 4 * ' '
+    s = re.sub(r"<function (\w+) at 0x[\da-f]+>", r"\1", s)
+    s = s.replace("{", "{\n")
+    s = s.replace("}", "\n}")
+    s = s.replace(", ", ",\n")
+    lines = s.split("\n")
+    idt = 4 * " "
     idt_level = 0
     for i, l in enumerate(lines):
-        if l in ['}', '},', ',']:
+        if l in ["}", "},", ","]:
             idt_level -= 1
             if idt_level < 0:
                 idt_level = 0
         lines[i] = idt_level * idt + l
-        if l[-1] == '{':
+        if l[-1] == "{":
             idt_level += 1
-    res = '\n'.join(lines)
+    res = "\n".join(lines)
     if jsonify:
         res = res.replace("'", '"')
     return res
@@ -89,7 +89,7 @@ def save_metadata(*, path=None, cli=False):
             if cli:
                 parser = argparse.ArgumentParser()
                 parser.add_argument(
-                    '--store_path', type=str, help='Path for storing metadata'
+                    "--store_path", type=str, help="Path for storing metadata"
                 )
                 args = parser.parse_args()
                 save_path = args.store_path
@@ -100,18 +100,18 @@ def save_metadata(*, path=None, cli=False):
                     else os.path.dirname(os.path.abspath(__file__))
                 )
             print(
-                f'save_metadata attempting create folder {save_path}...', end=''
+                f"save_metadata attempting create folder {save_path}...", end=""
             )
             os.makedirs(save_path, exist_ok=True)
-            print('SUCCESS')
-            full_path = os.path.join(save_path, 'metadata.pydict')
+            print("SUCCESS")
+            full_path = os.path.join(save_path, "metadata.pydict")
             print(
-                f'save_metadata attempting to save metadata to {full_path}...',
-                end='',
+                f"save_metadata attempting to save metadata to {full_path}...",
+                end="",
             )
-            with open(full_path, 'w') as f:
+            with open(full_path, "w") as f:
                 f.write(prettify_dict(meta))
-            print('SUCCESS')
+            print("SUCCESS")
 
             return meta
 
@@ -133,7 +133,7 @@ def path_up(path, n=1):
     return os.sep.join(path_tokens[:-n])
 
 
-def justify_lines(lines, *, demarcator='&', align='ljust', extra_space=0):
+def justify_lines(lines, *, demarcator="&", align="ljust", extra_space=0):
     # Step (1)
     l = [line.split(demarcator) for line in lines]
 
@@ -147,7 +147,7 @@ def justify_lines(lines, *, demarcator='&', align='ljust', extra_space=0):
         )
 
     # Step (4)
-    if align.lower() not in ['ljust', 'rjust']:
+    if align.lower() not in ["ljust", "rjust"]:
         raise ValueError("Invalid align argument. Must be 'ljust' or 'rjust'.")
 
     # Determine max lengths for each column
@@ -162,12 +162,12 @@ def justify_lines(lines, *, demarcator='&', align='ljust', extra_space=0):
                 max_length + extra_space
             )
             formatted_line.append(formatted_text)
-        formatted_lines.append(' '.join(formatted_line))
+        formatted_lines.append(" ".join(formatted_line))
 
     return "\n".join(formatted_lines)
 
 
-def printj(lines, *, demarcator='&', align='ljust', extra_space=0, **kw):
+def printj(lines, *, demarcator="&", align="ljust", extra_space=0, **kw):
     print(
         justify_lines(
             lines, demarcator=demarcator, align=align, extra_space=extra_space
@@ -189,10 +189,10 @@ def var_unique_name(tmp, calling_context):
     names = var_name(tmp, calling_context)
     if len(names) > 1:
         raise ValueError(
-            'Multiple names for variable with debug info below\n'
-            f'    id={id(tmp)}\n'
-            f'    possible_names={names}\n'
-            f'    calling_context={calling_context}'
+            "Multiple names for variable with debug info below\n"
+            f"    id={id(tmp)}\n"
+            f"    possible_names={names}\n"
+            f"    calling_context={calling_context}"
         )
     return names[0]
 
@@ -201,25 +201,25 @@ def get_var(var_name, calling_context):
     return calling_context.get(var_name, None)
 
 
-def istr(*args, l=0, idt_str='    ', cpl=80):
+def istr(*args, l=0, idt_str="    ", cpl=80):
     idt_level = l
 
     def dummy_endline(i, x):
-        if '\n' not in x:
-            return ''
+        if "\n" not in x:
+            return ""
         n = cpl - len(x) - idt_level * len(idt_str) - 1
         if i > 0:
             n -= len(idt_str)
         delimiter = GlobalHelpers.get_delimiter(x)
         extra = n * delimiter
-        extra = extra[:n] + ' '
+        extra = extra[:n] + " "
         return extra
 
     args1 = []
     for e in args:
-        u = e.split('\n')
+        u = e.split("\n")
         for i in range(len(u) - 1):
-            u[i] = u[i] + '\n'
+            u[i] = u[i] + "\n"
         args1.extend(u)
 
     args2 = []
@@ -227,8 +227,8 @@ def istr(*args, l=0, idt_str='    ', cpl=80):
         if len(e) < cpl:
             args2.append(e)
         else:
-            tokens = e.split(' ')
-            args2.append('')
+            tokens = e.split(" ")
+            args2.append("")
             total = 0
             for t in tokens:
                 if total + len(t) > cpl:
@@ -238,10 +238,10 @@ def istr(*args, l=0, idt_str='    ', cpl=80):
                     args2[-1] += t
                     total += len(t)
                     if total < cpl:
-                        args2[-1] += ' '
+                        args2[-1] += " "
                         total += 1
     delimiters = [dummy_endline(i, e) for i, e in enumerate(args2)]
-    args = [e.replace('\n', '') + d for e, d in zip(args2, delimiters)]
+    args = [e.replace("\n", "") + d for e, d in zip(args2, delimiters)]
 
     wrapper = textwrap.TextWrapper(
         width=cpl,
@@ -250,30 +250,30 @@ def istr(*args, l=0, idt_str='    ', cpl=80):
         subsequent_indent=(idt_level + 1) * idt_str,
     )
 
-    if 'comment' in args:
-        input('yoyoyo')
+    if "comment" in args:
+        input("yoyoyo")
         input(args)
-    res = '\n'.join(wrapper.wrap(''.join(args)))
+    res = "\n".join(wrapper.wrap("".join(args)))
 
     for e in delimiters:
-        res = res.replace(e.replace(' ', ''), '')
+        res = res.replace(e.replace(" ", ""), "")
 
     return res
 
 
-def iprints(*args, l=0, idt_str='    ', cpl=80, **kw):
+def iprints(*args, l=0, idt_str="    ", cpl=80, **kw):
     print(
         istr(*args, l=l, idt_str=idt_str, cpl=cpl),
         **kw,
     )
 
 
-def iprintl(*args, l=0, idt_str='    ', cpl=80, sep='\n', **kw):
+def iprintl(*args, l=0, idt_str="    ", cpl=80, sep="\n", **kw):
     args = [istr(e, l=l, idt_str=idt_str, cpl=cpl) for e in args]
-    print('\n'.join(args), sep=sep, **kw)
+    print("\n".join(args), sep=sep, **kw)
 
 
-def iprintt(*args, l=0, idt_str='    ', cpl=80, sep='\n', **kw):
+def iprintt(*args, l=0, idt_str="    ", cpl=80, sep="\n", **kw):
     args1 = []
     for arg in args:
         if isinstance(arg, str):
@@ -281,8 +281,8 @@ def iprintt(*args, l=0, idt_str='    ', cpl=80, sep='\n', **kw):
         elif isinstance(arg, tuple):
             if len(arg) != 2:
                 raise ValueError(
-                    'Tuple must have length 2. USAGE: (string,'
-                    ' local_indent_level)'
+                    "Tuple must have length 2. USAGE: (string,"
+                    " local_indent_level)"
                 )
             args1.append(
                 istr(
@@ -294,42 +294,42 @@ def iprintt(*args, l=0, idt_str='    ', cpl=80, sep='\n', **kw):
             )
         else:
             raise ValueError(
-                'Arguments must be strings or tuples. USAGE: (string,'
-                ' local_indent_level). If only string is passed, local_indent'
-                ' level is assumed to be equal to kwarg l, which you have'
-                f' passed l={l}.'
+                "Arguments must be strings or tuples. USAGE: (string,"
+                " local_indent_level). If only string is passed, local_indent"
+                " level is assumed to be equal to kwarg l, which you have"
+                f" passed l={l}."
             )
     print(*args1, sep=sep, **kw)
 
 
-def iprint(*args, l=0, idt_str='    ', cpl=80, sep='\n', mode='auto', **kw):
-    if mode == 'auto':
+def iprint(*args, l=0, idt_str="    ", cpl=80, sep="\n", mode="auto", **kw):
+    if mode == "auto":
         iprintt(*args, l=l, idt_str=idt_str, cpl=cpl, sep=sep, **kw)
-    elif mode == 'lines':
+    elif mode == "lines":
         iprintl(*args, l=l, idt_str=idt_str, cpl=cpl, sep=sep, **kw)
-    elif mode == 'string':
+    elif mode == "string":
         iprints(*args, l=l, idt_str=idt_str, cpl=cpl, sep=sep, **kw)
     else:
         raise ValueError(
-            f'Invalid mode {mode}. Choose from [auto, lines, string]'
+            f"Invalid mode {mode}. Choose from [auto, lines, string]"
         )
 
 
-def iraise(error_type, *args, l=0, idt_str='    ', cpl=80):
+def iraise(error_type, *args, l=0, idt_str="    ", cpl=80):
     raise error_type(istr(*args, l=l, idt_str=idt_str, cpl=cpl))
 
 
-def ireraise(e, *args, l=0, idt_str='    ', cpl=80, idt_further=True):
-    msg = str(e) + '\n'
+def ireraise(e, *args, l=0, idt_str="    ", cpl=80, idt_further=True):
+    msg = str(e) + "\n"
     exception_type = type(e)
     full = istr(msg, l=l, idt_str=idt_str, cpl=cpl)
     if idt_further:
         idt_level += 1
     full += (
-        '\n'
-        + cpl * '*'
+        "\n"
+        + cpl * "*"
         + istr(*args, idt_level=idt_level, idt_str=idt_str, cpl=cpl)
-        + cpl * '*'
+        + cpl * "*"
     )
     raise exception_type(full)
 
@@ -341,7 +341,7 @@ def nothing(*args, **kwargs):
 def call_counter_obj(func):
     def wrapper(instance, *args, **kwargs):
         # Check if the counter attribute exists, if not, initialize
-        if not hasattr(instance, '_call_counter'):
+        if not hasattr(instance, "_call_counter"):
             instance._call_counter = {}
 
         # Increment the counter for the function
@@ -357,17 +357,12 @@ def call_counter_obj(func):
     return wrapper
 
 
-def call_counter(verbose=0, print_fn=nothing, return_counter=False):
+def call_counter(_verbose=0, postprocess=nothing, return_counter=False):
     def decorator(func):
         def wrapper(*args, **kwargs):
             wrapper.calls += 1
-            if kwargs.get('verbose', 0) <= verbose:
-                print_fn(
-                    f"Function {func.__name__} has been called"
-                    f" {wrapper.calls} times."
-                )
             res = func(*args, **kwargs)
-            print_fn(wrapper.calls, verbose=verbose)
+            postprocess(return_val=res, calls=wrapper.calls, verbose=_verbose)
             if return_counter:
                 return res, wrapper.calls
             else:
