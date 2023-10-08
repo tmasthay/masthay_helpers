@@ -334,7 +334,11 @@ def ireraise(e, *args, l=0, idt_str='    ', cpl=80, idt_further=True):
     raise exception_type(full)
 
 
-def call_counter(func):
+def nothing(*args, **kwargs):
+    pass
+
+
+def call_counter_obj(func):
     def wrapper(instance, *args, **kwargs):
         # Check if the counter attribute exists, if not, initialize
         if not hasattr(instance, '_call_counter'):
@@ -351,3 +355,25 @@ def call_counter(func):
         )
 
     return wrapper
+
+
+def call_counter(verbose=0, print_fn=nothing, return_counter=False):
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+            wrapper.calls += 1
+            if kwargs.get('verbose', 0) <= verbose:
+                print_fn(
+                    f"Function {func.__name__} has been called"
+                    f" {wrapper.calls} times."
+                )
+            res = func(*args, **kwargs)
+            print_fn(wrapper.calls, verbose=verbose)
+            if return_counter:
+                return res, wrapper.calls
+            else:
+                return res
+
+        wrapper.calls = 0
+        return wrapper
+
+    return decorator
