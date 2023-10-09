@@ -417,10 +417,10 @@ def call_counter(verbose=0, postprocess=nothing, return_counter=False):
 class DotDict:
     def __init__(self, d):
         for k, v in d.items():
-            setattr(self, k, v)
+            self.set(k, v)
 
     def set(self, k, v):
-        setattr(self, k, v)
+        self.__dict__[k] = v
 
     def get(self, k):
         return getattr(self, k)
