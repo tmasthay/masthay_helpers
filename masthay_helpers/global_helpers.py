@@ -460,3 +460,42 @@ def peel_final(x):
         return np.ravel_multi_index(args, shape)
 
     return y, unravel, ravel
+
+
+def get_print(
+    _verbose,
+    l=0,
+    idt_str="    ",
+    cpl=80,
+    sep="\n",
+    mode="auto",
+    demarcator="&",
+    align="ljust",
+    extra_space=0,
+):
+    def print_fn(*args, verbose=1, **kw):
+        if verbose <= _verbose:
+            kw["flush"] = True
+            iprint(
+                *args,
+                l=l,
+                idt_str=idt_str,
+                cpl=cpl,
+                sep=sep,
+                mode=mode,
+                **kw,
+            )
+
+    def print_col_fn(*args, verbose=1, **kw):
+        if verbose <= _verbose:
+            kw["flush"] = True
+            printj(
+                args,
+                demarcator=demarcator,
+                align=align,
+                extra_space=extra_space,
+                **kw,
+            )
+        return print
+
+    return print_fn, print_col_fn
