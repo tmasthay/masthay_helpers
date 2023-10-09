@@ -9,6 +9,7 @@ import argparse
 import textwrap
 from itertools import product
 import black
+import torch
 
 
 class GlobalHelpers:
@@ -54,29 +55,6 @@ def get_dependencies():  # Run the grep command using subprocess
         if l not in final:
             final.append(l)
     return final
-
-
-# def prettify_dict(d, jsonify=True):
-#     s = str(d)
-#     s = re.sub(r"<function (\w+) at 0x[\da-f]+>", r"\1", s)
-#     s = s.replace("{", "{\n")
-#     s = s.replace("}", "\n}")
-#     s = s.replace(", ", ",\n")
-#     lines = s.split("\n")
-#     idt = 4 * " "
-#     idt_level = 0
-#     for i, l in enumerate(lines):
-#         if l in ["}", "},", ","]:
-#             idt_level -= 1
-#             if idt_level < 0:
-#                 idt_level = 0
-#         lines[i] = idt_level * idt + l
-#         if l[-1] == "{":
-#             idt_level += 1
-#     res = "\n".join(lines)
-#     if jsonify:
-#         res = res.replace("'", '"')
-#     return res
 
 
 def format_with_black(
@@ -499,3 +477,43 @@ def get_print(
         return print
 
     return print_fn, print_col_fn
+
+
+def summarize_tensor(tensor, *, idt_level=0, idt_str="    ", heading="Tensor"):
+    stats = dict(dtype=tensor.dtype, shape=tensor.shape)
+    if tensor.dtype == torch.bool:
+        return str(stats)
+    elif tensor.dtype in [
+        torch.int8,
+        torch.int16,
+        torch.int32,
+        torch.int64,
+        torch.uint8,
+    ]:
+        tensor = tensor.float()
+
+    # Compute various statistics
+    stats.update(
+        dict(
+            mean=torch.mean(tensor).item(),
+            variance=torch.var(tensor).item(),
+            median=torch.median(tensor).item(),
+            min=torch.min(tensor).item(),
+            max=torch.max(tensor).item(),
+            stddev=torch.std(tensor).item(),
+        )
+    )
+
+    # Prepare the summary string with the desired indentation
+    indent = idt_str * idt_level
+    summary = [f"{heading}:"]
+    for key, value in stats.items():
+        summary.append(f"{indent}{idt_str}{key} = {value}")
+
+    return "\n".join(summary)
+
+
+def print_tensor(tensor, print_fn=print, print_kwargs=None, **kwargs):
+    if print_kwargs is None:
+        print_kwargs = {"flush": True}
+    print_fn(summarize_tensor(tensor, **kwargs), **print_kwargs)
