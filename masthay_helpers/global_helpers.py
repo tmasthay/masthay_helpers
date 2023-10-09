@@ -426,6 +426,9 @@ class DotDict:
     def str(self):
         return prettify_dict(self.__dict__)
 
+    def dict(self):
+        return self.__dict__
+
 
 def peel_final(x):
     y = x.view(-1, x.shape[-1])
