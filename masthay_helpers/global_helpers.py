@@ -442,7 +442,7 @@ def peel_final(x):
 
 def get_print(
     *,
-    verbose,
+    _verbose,
     l=0,
     idt_str="    ",
     cpl=80,
