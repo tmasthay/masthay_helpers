@@ -1,6 +1,7 @@
 from subprocess import check_output as co
 import os
 import numpy as np
+from .global_helpers import format_with_black
 
 
 def sco(s, split=True):
@@ -105,6 +106,7 @@ def init_modules(path, **kw):
             s += "from .%s import *\n" % e
     #        s += 'from . import *'
     if True:
+        s = format_with_black(s)
         filename = path + "/__init__.py"
         with open(filename, "w") as f:
             print('Write to "%s"\n"%s"' % (filename, s))
