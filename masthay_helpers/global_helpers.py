@@ -447,3 +447,16 @@ class DotDict:
 
     def str(self):
         return prettify_dict(self.__dict__)
+
+
+def peel_final(x):
+    y = x.view(-1, x.shape[-1])
+    shape = x.shape[:-1]
+
+    def unravel(i):
+        return np.unravel_index(i, shape)
+
+    def ravel(*args):
+        return np.ravel_multi_index(args, shape)
+
+    return y, unravel, ravel
