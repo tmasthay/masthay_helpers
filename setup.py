@@ -7,7 +7,7 @@ with open("requirements.txt") as f:
 
 setup(
     name="masthay_helpers",
-    version="0.2.45",
+    version="0.2.46",
     author="Tyler Masthay",
     description="Helper functions for repetitive and useful tasks",
     long_description=open("README.md").read(),

@@ -68,6 +68,8 @@ def main():
         frame_format="jpg",
         movie_format="gif",
         duration=100,
+        path="figs/tensor2d",
+        name="movie",
     )
 
 

@@ -204,6 +204,8 @@ def plot_tensor2d_fast(
     duration=100,
     frame_format="png",
     movie_format="gif",
+    path=".",
+    name="movie",
     **kw,
 ):
     def printv(*args, **kwargs):
@@ -267,9 +269,13 @@ def plot_tensor2d_fast(
         if (len(frames) % print_freq) == 0:
             printv(f"Processed {len(frames)} out of {N} slices")
 
-    printv("Creating GIF...", end="", flush=True)
+    abs_path = os.path.abspath(path)
+    os.makedirs(abs_path, exist_ok=True)
+    name = name.replace(f".{movie_format}", "")
+    plot_name = os.path.join(abs_path, name) + f".{movie_format}"
+    printv(f"Creating GIF at {plot_name}...", end="")
     frames[0].save(
-        f"movie.{movie_format}",
+        plot_name,
         format=movie_format.upper(),
         append_images=frames[1:],
         save_all=True,
