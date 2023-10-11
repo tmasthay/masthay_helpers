@@ -10,7 +10,7 @@ def get_axes(slices):
     return [i for i in range(len(slices)) if slices[i] == slice(None)]
 
 
-def iplot_workhorse(data_frame, *, ylabel="Y", title=""):
+def iplot_workhorse(data_frame, **kw):
     # (1) Check if DataFrame has at least 3 columns
     if len(data_frame.columns) < 3:
         raise ValueError(
@@ -39,12 +39,11 @@ def iplot_workhorse(data_frame, *, ylabel="Y", title=""):
 
     # Define plotting functions
     def plot_1D(*indices):
-        return hv.Curve(data[tuple(indices)]).opts(
-            ylabel=ylabel, xlabel=index_names[get_axes(indices)[0]], title=title
-        )
+        kw["xlabel"] = index_names[get_axes(indices)[0]]
+        return hv.Curve(data[tuple(indices)]).opts(**kw)
 
     def plot_2D(*indices, kdims):
-        return hv.Image(data[tuple(indices)], kdims=kdims).opts(title=title)
+        return hv.Image(data[tuple(indices)], kdims=kdims).opts(**kw)
 
     # Create widgets
     dim_selector = pn.widgets.RadioBoxGroup(
