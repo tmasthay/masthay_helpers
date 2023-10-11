@@ -43,6 +43,8 @@ def iplot_workhorse(data_frame, **kw):
         return hv.Curve(data[tuple(indices)]).opts(**kw)
 
     def plot_2D(*indices, kdims):
+        kw["ylabel"] = index_names[get_axes(indices)[1]]
+        kw["xlabel"] = index_names[get_axes(indices)[0]]
         return hv.Image(data[tuple(indices)], kdims=kdims).opts(**kw)
 
     # Create widgets
