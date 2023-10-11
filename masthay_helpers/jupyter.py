@@ -131,12 +131,7 @@ def iplot_workhorse(data_frame, **kw):
     return layout
 
 
-def iplot(file_path, column_names, **kw):
-    # Load data from file
-    data = torch.load(
-        file_path
-    )  # Assuming a .npy file, adjust as necessary for other file formats
-
+def iplot(data, column_names, **kw):
     # Check data dimensions
     if len(data.shape) < 2:
         raise ValueError("Data should have at least 2 dimensions.")
@@ -157,3 +152,9 @@ def iplot(file_path, column_names, **kw):
 
     # Generate and return the interactive plot
     return iplot_workhorse(data_frame, **kw)
+
+
+def iplot_disk(file_path, column_names, **kw):
+    # Load data from file
+    data = torch.load(file_path)
+    return iplot(data, column_names, **kw)
