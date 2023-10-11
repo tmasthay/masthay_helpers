@@ -6,7 +6,11 @@ import panel as pn
 import torch
 
 
-def iplot_workhorse(data_frame):
+def get_axes(slices):
+    return [i for i in range(len(slices)) if slices[i] == slice(None)]
+
+
+def iplot_workhorse(data_frame, *, ylabel="Y", title=""):
     # (1) Check if DataFrame has at least 3 columns
     if len(data_frame.columns) < 3:
         raise ValueError(
@@ -35,13 +39,12 @@ def iplot_workhorse(data_frame):
 
     # Define plotting functions
     def plot_1D(*indices):
-        # print(f'indices={indices}')
-        # idx = [slice(None) if i < 2 else indices[i-2] for i in range(len(df_shape))]
-        # print(f'idx={idx}', flush=True)
-        return hv.Curve(data[tuple(indices)])
+        return hv.Curve(data[tuple(indices)]).opts(
+            ylabel=ylabel, xlabel=index_names[get_axes(indices)[0]], title=title
+        )
 
     def plot_2D(*indices, kdims):
-        return hv.Image(data[tuple(indices)], kdims=kdims)
+        return hv.Image(data[tuple(indices)], kdims=kdims).opts(title=title)
 
     # Create widgets
     dim_selector = pn.widgets.RadioBoxGroup(
@@ -127,7 +130,7 @@ def iplot_workhorse(data_frame):
     return layout
 
 
-def iplot(file_path, column_names):
+def iplot(file_path, column_names, **kw):
     # Load data from file
     data = torch.load(
         file_path
@@ -152,4 +155,4 @@ def iplot(file_path, column_names):
     )
 
     # Generate and return the interactive plot
-    return iplot_workhorse(data_frame)
+    return iplot_workhorse(data_frame, **kw)
