@@ -10,6 +10,7 @@ import textwrap
 from itertools import product
 import black
 import torch
+import inspect
 
 
 class GlobalHelpers:
@@ -521,3 +522,17 @@ def print_tensor(tensor, print_fn=print, print_kwargs=None, **kwargs):
     if print_kwargs is None:
         print_kwargs = {"flush": True}
     print_fn(summarize_tensor(tensor, **kwargs), **print_kwargs)
+
+
+def filter_kw(func, kwargs):
+    sig = inspect.signature(func)
+    return {k: v for k, v in kwargs.items() if k in sig.parameters}
+
+
+def clean_kw(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        filtered_kwargs = filter_kw(func, kwargs)
+        return func(*args, **filtered_kwargs)
+
+    return wrapper
