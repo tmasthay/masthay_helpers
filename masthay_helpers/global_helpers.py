@@ -279,10 +279,7 @@ def istr(*args, l=0, idt_str="    ", cpl=80):
 
 
 def iprints(*args, l=0, idt_str="    ", cpl=80, **kw):
-    print(
-        istr(*args, l=l, idt_str=idt_str, cpl=cpl),
-        **kw,
-    )
+    print(istr(*args, l=l, idt_str=idt_str, cpl=cpl), **kw)
 
 
 def iprintl(*args, l=0, idt_str="    ", cpl=80, sep="\n", **kw):
@@ -301,14 +298,7 @@ def iprintt(*args, l=0, idt_str="    ", cpl=80, sep="\n", **kw):
                     "Tuple must have length 2. USAGE: (string,"
                     " local_indent_level)"
                 )
-            args1.append(
-                istr(
-                    arg[0],
-                    l=l + arg[1],
-                    idt_str=idt_str,
-                    cpl=cpl,
-                )
-            )
+            args1.append(istr(arg[0], l=l + arg[1], idt_str=idt_str, cpl=cpl))
         else:
             raise ValueError(
                 "Arguments must be strings or tuples. USAGE: (string,"
@@ -394,6 +384,23 @@ def call_counter(verbose=0, postprocess=nothing, return_counter=False):
     return decorator
 
 
+def call_vars(*, update=None, **kwargs_dummy):
+    if update is None:
+        update = lambda *args, res, state, **kw: state
+
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            res = func(*args, **kwargs)
+            wrapper.d = update(*args, res=res, state=wrapper.d, **kwargs)
+            return res
+
+        wrapper.d = kwargs_dummy
+        return wrapper
+
+    return decorator
+
+
 class DotDict:
     def __init__(self, d):
         for k, v in d.items():
@@ -461,13 +468,7 @@ def get_print(
         if verbose <= _verbose:
             kw["flush"] = True
             iprint(
-                *args,
-                l=l,
-                idt_str=idt_str,
-                cpl=cpl,
-                sep=sep,
-                mode=mode,
-                **kw,
+                *args, l=l, idt_str=idt_str, cpl=cpl, sep=sep, mode=mode, **kw
             )
 
     def print_col_fn(*args, verbose=1, **kw):
@@ -552,8 +553,7 @@ def pandify(data, column_names):
 
     # Create a multi-level column index using the provided column names
     columns = pd.MultiIndex.from_product(
-        [range(dim_size) for dim_size in data.shape[1:]],
-        names=column_names,
+        [range(dim_size) for dim_size in data.shape[1:]], names=column_names
     )
 
     # Create and return a DataFrame

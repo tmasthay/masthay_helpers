@@ -3,7 +3,13 @@ import panel as pn
 import holoviews as hv
 import numpy as np
 import torch
-from .global_helpers import filter_kw, pandify, depandify, get_full_slices
+from .global_helpers import (
+    filter_kw,
+    pandify,
+    depandify,
+    get_full_slices,
+    call_vars,
+)
 import copy
 import importlib
 
@@ -26,18 +32,22 @@ def iplot_workhorse(*, data_frame, cols=1, one, two):
     # Define plotting functions
     def plot_1D(*indices):
         lcl_one = copy.deepcopy(one)
+        loop = copy.deepcopy(lcl_one["loop"])
+        del lcl_one["loop"]
 
         overlay = None
         for i in range(data.shape[0]):
             idx = tuple([i] + list(indices))
-            curve = hv.Curve(data[idx], label=lcl_one["loop"]["labels"][i])
-            curve = curve.opts(**lcl_kw)
+            curve = hv.Curve(data[idx], label=loop['labels'][i])
+            curve = curve.opts(**lcl_one)
             overlay = curve if overlay is None else overlay * curve
         return overlay
 
     def plot_2D(*indices, kdims):
         plots = []
         lcl_two = copy.deepcopy(two)
+        loop = copy.deepcopy(two['loop'])
+        del lcl_two['loop']
 
         full = get_full_slices(indices)
         for i in range(data.shape[0]):
@@ -45,8 +55,8 @@ def iplot_workhorse(*, data_frame, cols=1, one, two):
             curr = hv.Image(data[idx], kdims=kdims).redim.range(
                 x=(0, df_shape[full[1]]), y=(0, df_shape[full[0]])
             )
-            lcl_two["title"] = lcl_two["loop"]["titles"][i]
-            curr = curr.opts(**lcl_kw)
+            lcl_two["title"] = loop['labels'][i]
+            curr = curr.opts(**lcl_two)
             plots.append(curr)
         layout = hv.Layout(plots)
         assert type(cols) == int
@@ -66,10 +76,18 @@ def iplot_workhorse(*, data_frame, cols=1, one, two):
     ]
 
     special_dim_0 = pn.widgets.IntInput(
-        name="Special Dimension 0", value=0, step=1
+        name="Special Dimension 0",
+        value=0,
+        step=1,
+        start=0,
+        end=len(sliders) - 1,
     )
     special_dim_1 = pn.widgets.IntInput(
-        name="Special Dimension 1", value=1, step=1
+        name="Special Dimension 1",
+        value=1,
+        step=1,
+        start=0,
+        end=len(sliders) - 1,
     )
 
     # Bind slider names to updated info
@@ -111,18 +129,13 @@ def iplot_workhorse(*, data_frame, cols=1, one, two):
             )
         )
         if special_dims[0] == special_dims[1] and dim == 2:
-            print(
-                (
-                    "Plotted dimensions are the same, dimension ="
-                    f" {special_dims[0]}, no update to plot taken"
-                ),
-                end="\r",
-            )
-            return
+            return reactive_plot.last
         idx = [
             slice(None) if i in special_dims[:dim] else indices[i]
             for i in range(len(indices))
         ]
+        res = plot_method(*idx)
+        reactive_plot.last = res
         return plot_method(*idx)
 
     # Create layout and return
