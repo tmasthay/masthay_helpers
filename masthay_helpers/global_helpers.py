@@ -11,6 +11,7 @@ from itertools import product
 import black
 import torch
 import inspect
+import pandas as pd
 
 
 class GlobalHelpers:
@@ -536,3 +537,39 @@ def clean_kw(func):
         return func(*args, **filtered_kwargs)
 
     return wrapper
+
+
+def pandify(data, column_names):
+    # Check input dimensions
+    if len(data.shape) < 2:
+        raise ValueError("Data should have at least 2 dimensions.")
+
+    if len(column_names) != len(data.shape) - 1:
+        raise ValueError(
+            f"column_names should have {len(data.shape) - 1} names, got"
+            f" {len(column_names)}"
+        )
+
+    # Create a multi-level column index using the provided column names
+    columns = pd.MultiIndex.from_product(
+        [range(dim_size) for dim_size in data.shape[1:]],
+        names=column_names,
+    )
+
+    # Create and return a DataFrame
+    data_frame = pd.DataFrame(data.reshape(data.shape[0], -1), columns=columns)
+
+    return data_frame
+
+
+def depandify(data_frame):
+    df_shape = [len(data_frame.index)] + [
+        len(e) for e in data_frame.columns.levels
+    ]
+    data = data_frame.values.reshape(df_shape)
+    column_names = data_frame.columns.names
+    return data, column_names
+
+
+def get_full_slices(indices):
+    return list(np.where(np.array(indices) == slice(None))[0])
