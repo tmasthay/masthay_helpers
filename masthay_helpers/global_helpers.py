@@ -573,3 +573,7 @@ def depandify(data_frame):
 
 def get_full_slices(indices):
     return list(np.where(np.array(indices) == slice(None))[0])
+
+
+def subdict(d, keys):
+    return {k: d[k] for k in keys}
