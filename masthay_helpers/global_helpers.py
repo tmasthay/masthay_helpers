@@ -577,3 +577,23 @@ def get_full_slices(indices):
 
 def subdict(d, keys):
     return {k: d[k] for k in keys}
+
+
+def kw_builder(key_builder=None):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kw):
+            if 'key_builder' in kw:
+                raise KeyError(
+                    "The keyword argument 'key_builder' is reserved by the"
+                    " decorator. Consider: (a) Omitting the decorator, (b)"
+                    " Refactoring the function so that it has different keyword"
+                    " arguments, or (c) Checking your passed keyword arguments."
+                )
+
+            kw = kw if key_builder is None else key_builder(kw)
+            return func(*args, **kw)
+
+        return wrapper
+
+    return decorator
