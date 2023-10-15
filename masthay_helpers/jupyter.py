@@ -43,12 +43,16 @@ def iplot_workhorse(*, data_frame, cols=1, one, two):
             overlay = curve if overlay is None else overlay * curve
         return overlay
 
-    def plot_2D(*indices, kdims, transpose=False):
+    def plot_2D(
+        *indices, kdims, transpose=False, invert_xaxis=False, invert_yaxis=False
+    ):
         plots = []
         lcl_two = copy.deepcopy(two)
         loop = copy.deepcopy(two['loop'])
         del lcl_two['loop']
         lcl_two['invert_axes'] = transpose
+        lcl_two['invert_xaxis'] = invert_xaxis
+        lcl_two['invert_yaxis'] = invert_yaxis
 
         full = get_full_slices(indices)
         for i in range(data.shape[0]):
@@ -70,6 +74,12 @@ def iplot_workhorse(*, data_frame, cols=1, one, two):
     )
 
     transpose_checkbox = pn.widgets.Checkbox(name="Transpose?", value=False)
+    invert_x_checkbox = pn.widgets.Checkbox(
+        name="Invert Horizontal Axis?", value=False
+    )
+    invert_y_checkbox = pn.widgets.Checkbox(
+        name="Invert Vertical Axis?", value=False
+    )
 
     sliders = [
         pn.widgets.IntSlider(
@@ -113,11 +123,13 @@ def iplot_workhorse(*, data_frame, cols=1, one, two):
     @pn.depends(
         dim_selector.param.value,
         transpose_checkbox.param.value,
+        invert_x_checkbox.param.value,
+        invert_y_checkbox.param.value,
         *sliders,
         special_dim_0.param.value,
         special_dim_1.param.value,
     )
-    def reactive_plot(dim, transpose, *indices):
+    def reactive_plot(dim, transpose, invert_xaxis, invert_yaxis, *indices):
         dim = 1 if dim == "1D" else 2
         special_dims = indices[-2:]
         indices = indices[:-2]
@@ -127,6 +139,8 @@ def iplot_workhorse(*, data_frame, cols=1, one, two):
             else lambda *x: plot_2D(
                 *x,
                 transpose=transpose,
+                invert_xaxis=invert_xaxis,
+                invert_yaxis=invert_yaxis,
                 kdims=[
                     index_names[special_dims[0]],
                     index_names[special_dims[1]],
@@ -148,6 +162,8 @@ def iplot_workhorse(*, data_frame, cols=1, one, two):
         pn.Column(
             dim_selector,
             transpose_checkbox,
+            invert_x_checkbox,
+            invert_y_checkbox,
             *sliders,
             special_dim_0,
             special_dim_1,
