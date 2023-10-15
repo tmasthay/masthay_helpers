@@ -624,3 +624,25 @@ def undupe(stdout=True, stderr=True):
         sys.stderr.close()
         sys.stderr = dupe.original_stderr
         delattr(dupe, 'original_stderr')
+
+
+def dynamic_expand(src, target_shape):
+    # Determine the indices where the shape of `src` matches the shape of `target`
+    common_shape = list(src.shape)
+    expand_shape = [1] * len(target_shape)
+
+    # Loop to place the true shape and put ones everywhere else
+    j = len(common_shape) - 1
+    for i in range(len(target_shape) - 1, -1, -1):
+        if j >= 0:
+            if common_shape[j] == target_shape[i]:
+                expand_shape[i] = common_shape[j]
+                j -= 1
+            elif common_shape[j] == 1:
+                j -= 1
+
+    # Reshape src to be compatible for broadcasting
+    src = src.view(*expand_shape)
+
+    # Expand to match target_shape
+    return src.expand(target_shape)
