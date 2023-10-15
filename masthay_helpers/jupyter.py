@@ -12,6 +12,7 @@ from .global_helpers import (
 )
 import copy
 import importlib
+import matplotlib.pyplot as plt
 
 
 def get_axes(slices):
@@ -43,9 +44,7 @@ def iplot_workhorse(*, data_frame, cols=1, one, two):
             overlay = curve if overlay is None else overlay * curve
         return overlay
 
-    def plot_2D(
-        *indices, kdims, transpose=False, invert_xaxis=False, invert_yaxis=False
-    ):
+    def plot_2D(*indices, kdims, transpose, invert_xaxis, invert_yaxis, cmap):
         plots = []
         lcl_two = copy.deepcopy(two)
         loop = copy.deepcopy(two['loop'])
@@ -53,6 +52,7 @@ def iplot_workhorse(*, data_frame, cols=1, one, two):
         lcl_two['invert_axes'] = transpose
         lcl_two['invert_xaxis'] = invert_xaxis
         lcl_two['invert_yaxis'] = invert_yaxis
+        lcl_two['cmap'] = cmap
 
         full = get_full_slices(indices)
         for i in range(data.shape[0]):
@@ -103,6 +103,10 @@ def iplot_workhorse(*, data_frame, cols=1, one, two):
         end=len(sliders) - 1,
     )
 
+    colormap_selector = pn.widgets.Select(
+        name='Colormap', options=plt.colormaps(), value='jet'
+    )
+
     # Bind slider names to updated info
     @pn.depends(special_dim_0.param.value, special_dim_1.param.value)
     def update_slider_names(special_dim_0_value, special_dim_1_value):
@@ -125,11 +129,14 @@ def iplot_workhorse(*, data_frame, cols=1, one, two):
         transpose_checkbox.param.value,
         invert_x_checkbox.param.value,
         invert_y_checkbox.param.value,
+        colormap_selector.param.value,
         *sliders,
         special_dim_0.param.value,
         special_dim_1.param.value,
     )
-    def reactive_plot(dim, transpose, invert_xaxis, invert_yaxis, *indices):
+    def reactive_plot(
+        dim, transpose, invert_xaxis, invert_yaxis, cmap, *indices
+    ):
         dim = 1 if dim == "1D" else 2
         special_dims = indices[-2:]
         indices = indices[:-2]
@@ -141,6 +148,7 @@ def iplot_workhorse(*, data_frame, cols=1, one, two):
                 transpose=transpose,
                 invert_xaxis=invert_xaxis,
                 invert_yaxis=invert_yaxis,
+                cmap=cmap,
                 kdims=[
                     index_names[special_dims[0]],
                     index_names[special_dims[1]],
@@ -164,6 +172,7 @@ def iplot_workhorse(*, data_frame, cols=1, one, two):
             transpose_checkbox,
             invert_x_checkbox,
             invert_y_checkbox,
+            colormap_selector,
             *sliders,
             special_dim_0,
             special_dim_1,
