@@ -43,11 +43,12 @@ def iplot_workhorse(*, data_frame, cols=1, one, two):
             overlay = curve if overlay is None else overlay * curve
         return overlay
 
-    def plot_2D(*indices, kdims):
+    def plot_2D(*indices, kdims, transpose=False):
         plots = []
         lcl_two = copy.deepcopy(two)
         loop = copy.deepcopy(two['loop'])
         del lcl_two['loop']
+        lcl_two['invert_axes'] = transpose
 
         full = get_full_slices(indices)
         for i in range(data.shape[0]):
@@ -67,6 +68,8 @@ def iplot_workhorse(*, data_frame, cols=1, one, two):
     dim_selector = pn.widgets.RadioBoxGroup(
         name="Dimension", options=["1D", "2D"], inline=True
     )
+
+    transpose_checkbox = pn.widgets.Checkbox(name="Transpose?", value=False)
 
     sliders = [
         pn.widgets.IntSlider(
@@ -109,11 +112,12 @@ def iplot_workhorse(*, data_frame, cols=1, one, two):
     # Bind plot updates to the widgets
     @pn.depends(
         dim_selector.param.value,
+        transpose_checkbox.param.value,
         *sliders,
         special_dim_0.param.value,
         special_dim_1.param.value,
     )
-    def reactive_plot(dim, *indices):
+    def reactive_plot(dim, transpose, *indices):
         dim = 1 if dim == "1D" else 2
         special_dims = indices[-2:]
         indices = indices[:-2]
@@ -122,6 +126,7 @@ def iplot_workhorse(*, data_frame, cols=1, one, two):
             if dim == 1
             else lambda *x: plot_2D(
                 *x,
+                transpose=transpose,
                 kdims=[
                     index_names[special_dims[0]],
                     index_names[special_dims[1]],
@@ -142,6 +147,7 @@ def iplot_workhorse(*, data_frame, cols=1, one, two):
     layout = pn.Row(
         pn.Column(
             dim_selector,
+            transpose_checkbox,
             *sliders,
             special_dim_0,
             special_dim_1,
