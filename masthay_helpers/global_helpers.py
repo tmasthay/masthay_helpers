@@ -597,3 +597,30 @@ def kw_builder(key_builder=None):
         return wrapper
 
     return decorator
+
+
+def dupe(stdout=True, stderr=True):
+    """
+    Duplicate stdout and stderr streams to /dev/null.
+    """
+    if stdout:
+        dupe.original_stdout = sys.stdout
+        sys.stdout = open(os.devnull, 'w')
+    if stderr:
+        dupe.original_stderr = sys.stderr
+        sys.stderr = open(os.devnull, 'w')
+
+
+def undupe(stdout=True, stderr=True):
+    """
+    Restore the original stdout and stderr streams if they were duplicated.
+    """
+    if stdout and hasattr(dupe, 'original_stdout'):
+        sys.stdout.close()
+        sys.stdout = dupe.original_stdout
+        delattr(dupe, 'original_stdout')
+
+    if stderr and hasattr(dupe, 'original_stderr'):
+        sys.stderr.close()
+        sys.stderr = dupe.original_stderr
+        delattr(dupe, 'original_stderr')
