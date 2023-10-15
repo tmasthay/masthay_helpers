@@ -70,7 +70,7 @@ def iplot_workhorse(*, data_frame, cols=1, one, two):
 
     sliders = [
         pn.widgets.IntSlider(
-            name=index_names[i], start=0, end=df_shape[i + 1] - 1
+            name=index_names[i], start=0, end=max(1, df_shape[i + 1] - 1)
         )
         for i in range(len(index_names))
     ]
