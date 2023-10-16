@@ -78,6 +78,10 @@ def format_with_black(
     except black.NothingChanged:
         return code
 
+def function_str_dummy(s):
+    s = s.replace('<locals>', 'locals')
+    s = re.sub(r'(<function .*? at .*?>)', r"'STRING_DUMMY: \1'", s)
+    return s
 
 def prettify_dict(
     d,
@@ -87,7 +91,7 @@ def prettify_dict(
     string_normalization=False,
 ):
     return format_with_black(
-        str(d),
+        function_str_dummy(str(d)),
         line_length=line_length,
         preview=preview,
         magic_trailing_comma=magic_trailing_comma,
