@@ -1,3 +1,6 @@
-python update_imports.py
-pip uninstall -y masthay_helpers
-pip install . 
+UPDATE_IMPORTS=${1:-0}
+if [ $UPDATE_IMPORTS -eq 1 ]; then
+    echo "Updating imports"
+    python update_imports.py
+fi
+pip install --force-reinstall --no-deps .

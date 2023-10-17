@@ -31,7 +31,8 @@ def iplot_workhorse(*, data_frame, cols=1, one, two):
     df_shape = data.shape
 
     # Define plotting functions
-    def plot_1D(special_dim_0, *indices):
+    def plot_1D(*indices, special_dim_0):
+        print(f'indices = {indices}', flush=True)
         lcl_one = copy.deepcopy(one)
         lcl_one['xlabel'] = lcl_one['loop']['xlabel'][special_dim_0]
         loop = copy.deepcopy(lcl_one["loop"])
@@ -45,7 +46,13 @@ def iplot_workhorse(*, data_frame, cols=1, one, two):
             overlay = curve if overlay is None else overlay * curve
         return overlay
 
-    def plot_2D(*indices, kdims, transpose, invert_xaxis, invert_yaxis, cmap):
+    def plot_2D(*, indices, kdims, transpose, invert_xaxis, invert_yaxis, cmap):
+        print(f'indices = {indices}', flush=True)
+        print(f'kdims = {kdims}', flush=True)
+        print(f'transpose = {transpose}', flush=True)
+        print(f'invert_xaxis = {invert_xaxis}', flush=True)
+        print(f'invert_yaxis = {invert_yaxis}', flush=True)
+        print(f'cmap = {cmap}')
         plots = []
         lcl_two = copy.deepcopy(two)
         loop = copy.deepcopy(two['loop'])
@@ -58,11 +65,17 @@ def iplot_workhorse(*, data_frame, cols=1, one, two):
         full = get_full_slices(indices)
         for i in range(data.shape[0]):
             idx = tuple([i] + list(indices))
-            curr = hv.Image(data[idx], kdims=kdims).redim.range(
+            print(f'i = {i}', flush=True)
+            print(f'idx = {idx}', flush=True)
+            print(f'indices = {indices}', flush=True)
+            u = hv.Image(data[idx], kdims=kdims)
+            print(f'u = {u}', flush=True)
+            u = u.redim.range(
                 x=(0, df_shape[full[1]]), y=(0, df_shape[full[0]])
             )
+            print(f'u = {u}', flush=True)
             lcl_two["title"] = loop['labels'][i]
-            curr = curr.opts(**lcl_two)
+            curr = u.opts(**lcl_two)
             plots.append(curr)
         layout = hv.Layout(plots)
         assert type(cols) == int
@@ -131,40 +144,45 @@ def iplot_workhorse(*, data_frame, cols=1, one, two):
         invert_x_checkbox.param.value,
         invert_y_checkbox.param.value,
         colormap_selector.param.value,
-        *sliders,
         special_dim_0.param.value,
         special_dim_1.param.value,
+        *sliders,
     )
     def reactive_plot(
-        dim, transpose, invert_xaxis, invert_yaxis, cmap, *indices
+        dim,
+        transpose,
+        invert_xaxis,
+        invert_yaxis,
+        cmap,
+        special_dim_0,
+        special_dim_1,
+        *indices,
     ):
         dim = 1 if dim == "1D" else 2
-        special_dims = indices[-2:]
-        indices = indices[:-2]
-        plot_method = (
-            lambda *x: plot_1D(special_dim_0.value, *x)
-            if dim == 1
-            else lambda *x: plot_2D(
-                *x,
-                transpose=transpose,
-                invert_xaxis=invert_xaxis,
-                invert_yaxis=invert_yaxis,
-                cmap=cmap,
-                kdims=[
-                    index_names[special_dims[0]],
-                    index_names[special_dims[1]],
-                ],
-            )
-        )
-        if special_dims[0] == special_dims[1] and dim == 2:
+        if special_dim_0 == special_dim_1 and dim == 2:
+            print('NO CHANGE', flush=True)
             return reactive_plot.last
+        special_dims = [special_dim_0, special_dim_1]
         idx = [
             slice(None) if i in special_dims[:dim] else indices[i]
             for i in range(len(indices))
         ]
-        res = plot_method(*idx)
+        if dim == 1:
+            res = plot_1D(*idx, special_dim_0=special_dim_0)
+        else:
+            print(f'Passed idx={idx}', flush=True)
+            print(f'Expanded idx=', *idx, flush=True)
+            res = plot_2D(
+                indices=idx,
+                transpose=transpose,
+                invert_xaxis=invert_xaxis,
+                invert_yaxis=invert_yaxis,
+                cmap=cmap,
+                kdims=[index_names[special_dim_0], index_names[special_dim_1]],
+            )
+
         reactive_plot.last = res
-        return plot_method(*idx)
+        return res
 
     # Create layout and return
     layout = pn.Row(
