@@ -31,8 +31,9 @@ def iplot_workhorse(*, data_frame, cols=1, one, two):
     df_shape = data.shape
 
     # Define plotting functions
-    def plot_1D(*indices):
+    def plot_1D(special_dim_0, *indices):
         lcl_one = copy.deepcopy(one)
+        lcl_one['xlabel'] = lcl_one['loop']['xlabel'][special_dim_0]
         loop = copy.deepcopy(lcl_one["loop"])
         del lcl_one["loop"]
 
@@ -141,7 +142,7 @@ def iplot_workhorse(*, data_frame, cols=1, one, two):
         special_dims = indices[-2:]
         indices = indices[:-2]
         plot_method = (
-            plot_1D
+            lambda *x: plot_1D(special_dim_0.value, *x)
             if dim == 1
             else lambda *x: plot_2D(
                 *x,
