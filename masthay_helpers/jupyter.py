@@ -41,7 +41,9 @@ def iplot_workhorse(*, data_frame, cols=1, one, two):
         overlay = None
         for i in range(data.shape[0]):
             idx = tuple([i] + list(indices))
-            curve = hv.Curve(data[idx], label=loop['labels'][i])
+            curve = hv.Curve(
+                data[idx], label=loop['label'][i], yscale=loop['yscale']
+            )
             curve = curve.opts(**lcl_one)
             overlay = curve if overlay is None else overlay * curve
         return overlay
