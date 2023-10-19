@@ -21,13 +21,12 @@ def get_axes(slices):
 
 
 @curry
-def plot_series(*, data, rules, indices, **kw):
+def plot_series(*, data, rules, idx, kw):
     runner = []
     for i in range(data.shape[0]):
-        idx = tuple([i] + list(indices))
-        curr = rules['plot_type'](data[idx], **rules['loop'](idx, **kw)).opts(
-            **rules['opts'](idx, **kw)
-        )
+        idx_lcl = tuple([i] + list(idx))
+        r = rules(idx=idx_lcl, **kw)
+        curr = r['plot_type'](data[idx_lcl], **r['loop']).opts(**r['opts'])
         runner.append(curr)
     return hv.Overlay(runner)
 
@@ -136,15 +135,20 @@ def iplot_workhorse(*, data_frame, cols=1, rules):
             for i in range(len(indices))
         ]
         if dim == 1:
-            res = plot_1D(idx=idx, active_dim=special_dims[0])
+            res = plot_1D(idx=idx, kw={'active_dim': special_dims[0]})
         else:
             res = plot_2D(
                 idx=idx,
-                transpose=transpose,
-                invert_xaxis=invert_xaxis,
-                invert_yaxis=invert_yaxis,
-                cmap=cmap,
-                kdims=[index_names[special_dim_0], index_names[special_dim_1]],
+                kw={
+                    'transpose': transpose,
+                    'invert_xaxis': invert_xaxis,
+                    'invert_yaxis': invert_yaxis,
+                    'cmap': cmap,
+                    'kdims': [
+                        index_names[special_dim_0],
+                        index_names[special_dim_1],
+                    ],
+                },
             )
 
         reactive_plot.last = res
