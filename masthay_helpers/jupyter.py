@@ -21,14 +21,14 @@ def get_axes(slices):
 
 
 @curry
-def plot_series(*, data, rules, idx, kw):
+def plot_series(*, data, rules, merge, idx, kw):
     runner = []
     for i in range(data.shape[0]):
         idx_lcl = tuple([i] + list(idx))
         r = rules(idx=idx_lcl, **kw)
         curr = r['plot_type'](data[idx_lcl], **r['loop']).opts(**r['opts'])
         runner.append(curr)
-    return hv.Overlay(runner)
+    return merge(runner)
 
 
 def iplot_workhorse(*, data_frame, cols=1, rules):
@@ -43,10 +43,14 @@ def iplot_workhorse(*, data_frame, cols=1, rules):
     df_shape = data.shape
 
     plot_1D = plot_series(
-        data=data, rules=rules['one'](data=data, column_names=index_names)
+        data=data,
+        rules=rules['one'](data=data, column_names=index_names),
+        merge=hv.Overlay,
     )
     plot_2D = plot_series(
-        data=data, rules=rules['two'](data=data, column_names=index_names)
+        data=data,
+        rules=rules['two'](data=data, column_names=index_names),
+        merge=(lambda runner: hv.Layout(runner).cols(cols)),
     )
 
     # Create widgets
@@ -148,6 +152,7 @@ def iplot_workhorse(*, data_frame, cols=1, rules):
                         index_names[special_dim_0],
                         index_names[special_dim_1],
                     ],
+                    'active_dims': special_dims,
                 },
             )
 
