@@ -652,3 +652,15 @@ def dynamic_expand(src, target_shape):
 
     # Expand to match target_shape
     return src.expand(target_shape)
+
+
+def kw_peeler(**peel):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kw):
+            kw = {k: kw[k] for k in kw if k not in peel}
+            return func(*args, **kw)
+
+        return wrapper
+
+    return decorator
