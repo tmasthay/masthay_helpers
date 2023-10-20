@@ -27,6 +27,7 @@ def plot_series(*, data, rules, merge, idx, kw):
         idx_lcl = tuple([i] + list(idx))
         r = rules(idx=idx_lcl, **kw)
         curr = r['plot_type'](data[idx_lcl], **r['loop']).opts(**r['opts'])
+        print(f'opts = {r["opts"]}', flush=True)
         runner.append(curr)
     return merge(runner)
 
