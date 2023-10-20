@@ -21,6 +21,56 @@ def get_axes(slices):
 
 
 @curry
+def rules_one(*, opts_info, loop_info, data, column_names, idx, active_dim):
+    loop = {'label': loop_info['labels'][idx[0]]}
+
+    def hook(plot, element):
+        plot.handles['axis'].set_yscale(
+            *opts_info['yscale']['args'], **opts_info['yscale']['kwargs']
+        )
+
+    opts = {
+        'ylim': (data.min(), data.max()),
+        'hooks': [hook],
+        'xlabel': column_names[active_dim],
+    }
+    return {'opts': opts, 'loop': loop, 'plot_type': hv.Curve}
+
+
+@curry
+def rules_two(
+    *,
+    opts_info,
+    loop_info,
+    data,
+    column_names,
+    idx,
+    active_dims,
+    transpose,
+    kdims,
+    invert_xaxis,
+    invert_yaxis,
+    cmap,
+):
+    active_dims = active_dims[::-1] if transpose else active_dims
+    loop = {
+        'label': loop_info['labels'][idx[0]],
+        'kdims': kdims,
+        'xlabel': column_names[active_dims[0]],
+        'ylabel': column_names[active_dims[1]],
+    }
+    opts = {
+        'cmap': cmap,
+        'clim': (data.min(), data.max()),
+        'invert_xaxis': invert_xaxis,
+        'invert_yaxis': invert_yaxis,
+        'invert_axes': transpose,
+        'colorbar': opts_info['colorbar'],
+    }
+    return {'opts': opts, 'loop': loop, 'plot_type': hv.Image}
+
+
+@curry
 def plot_series(*, data, rules, merge, idx, kw):
     runner = []
     for i in range(data.shape[0]):
