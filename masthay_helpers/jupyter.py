@@ -29,11 +29,15 @@ def rules_one(*, opts_info, loop_info, data, column_names, idx, active_dim):
             *opts_info['yscale']['args'], **opts_info['yscale']['kwargs']
         )
 
+    opts_info.setdefault('yscale', {'args': [], 'kwargs': {}})
+    opts_info['hooks'] = opts_info.get('hooks', []) + [hook]
+    opts_info['ylim'] = opts_info.get('ylim', (data.min(), data.max()))
     opts = {
-        'ylim': (data.min(), data.max()),
-        'hooks': [hook],
+        'ylim': opts_info['ylim'],
+        'hooks': opts_info['hooks'],
         'xlabel': column_names[active_dim],
     }
+
     return {'opts': opts, 'loop': loop, 'plot_type': hv.Curve}
 
 
@@ -61,11 +65,11 @@ def rules_two(
     }
     opts = {
         'cmap': cmap,
-        'clim': (data.min(), data.max()),
+        'clim': opts_info.get('clim', (data.min(), data.max())),
         'invert_xaxis': invert_xaxis,
         'invert_yaxis': invert_yaxis,
         'invert_axes': transpose,
-        'colorbar': opts_info['colorbar'],
+        'colorbar': opts_info.get('colorbar', True),
     }
     return {'opts': opts, 'loop': loop, 'plot_type': hv.Image}
 
