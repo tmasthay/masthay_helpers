@@ -22,23 +22,23 @@ def get_axes(slices):
 
 @curry
 def rules_one(*, opts_info, loop_info, data, column_names, idx, active_dim):
-    loop = {'label': loop_info['labels'][idx[0]]}
+    loop = {"label": loop_info["labels"][idx[0]]}
 
     def hook(plot, element):
-        plot.handles['axis'].set_yscale(
-            *opts_info['yscale']['args'], **opts_info['yscale']['kwargs']
+        plot.handles["axis"].set_yscale(
+            *opts_info["yscale"]["args"], **opts_info["yscale"]["kwargs"]
         )
 
-    opts_info.setdefault('yscale', {'args': [], 'kwargs': {}})
-    opts_info['hooks'] = opts_info.get('hooks', []) + [hook]
-    opts_info['ylim'] = opts_info.get('ylim', (data.min(), data.max()))
+    opts_info.setdefault("yscale", {"args": [], "kwargs": {}})
+    opts_info["hooks"] = opts_info.get("hooks", []) + [hook]
+    opts_info["ylim"] = opts_info.get("ylim", (data.min(), data.max()))
     opts = {
-        'ylim': opts_info['ylim'],
-        'hooks': opts_info['hooks'],
-        'xlabel': column_names[active_dim],
+        "ylim": opts_info["ylim"],
+        "hooks": opts_info["hooks"],
+        "xlabel": column_names[active_dim],
     }
 
-    return {'opts': opts, 'loop': loop, 'plot_type': hv.Curve}
+    return {"opts": opts, "loop": loop, "plot_type": hv.Curve}
 
 
 @curry
@@ -58,20 +58,20 @@ def rules_two(
 ):
     active_dims = active_dims[::-1] if transpose else active_dims
     loop = {
-        'label': loop_info['labels'][idx[0]],
-        'kdims': kdims,
-        'xlabel': column_names[active_dims[0]],
-        'ylabel': column_names[active_dims[1]],
+        "label": loop_info["labels"][idx[0]],
+        "kdims": kdims,
+        "xlabel": column_names[active_dims[0]],
+        "ylabel": column_names[active_dims[1]],
     }
     opts = {
-        'cmap': cmap,
-        'clim': opts_info.get('clim', (data.min(), data.max())),
-        'invert_xaxis': invert_xaxis,
-        'invert_yaxis': invert_yaxis,
-        'invert_axes': transpose,
-        'colorbar': opts_info.get('colorbar', True),
+        "cmap": cmap,
+        "clim": opts_info.get("clim", (data.min(), data.max())),
+        "invert_xaxis": invert_xaxis,
+        "invert_yaxis": invert_yaxis,
+        "invert_axes": transpose,
+        "colorbar": opts_info.get("colorbar", True),
     }
-    return {'opts': opts, 'loop': loop, 'plot_type': hv.Image}
+    return {"opts": opts, "loop": loop, "plot_type": hv.Image}
 
 
 @curry
@@ -80,7 +80,7 @@ def plot_series(*, data, rules, merge, idx, kw):
     for i in range(data.shape[0]):
         idx_lcl = tuple([i] + list(idx))
         r = rules(idx=idx_lcl, **kw)
-        curr = r['plot_type'](data[idx_lcl], **r['loop']).opts(**r['opts'])
+        curr = r["plot_type"](data[idx_lcl], **r["loop"]).opts(**r["opts"])
         runner.append(curr)
     return merge(runner)
 
@@ -98,12 +98,12 @@ def iplot_workhorse(*, data_frame, cols=1, rules):
 
     plot_1D = plot_series(
         data=data,
-        rules=rules['one'](data=data, column_names=index_names),
+        rules=rules["one"](data=data, column_names=index_names),
         merge=hv.Overlay,
     )
     plot_2D = plot_series(
         data=data,
-        rules=rules['two'](data=data, column_names=index_names),
+        rules=rules["two"](data=data, column_names=index_names),
         merge=(lambda runner: hv.Layout(runner).cols(cols)),
     )
 
@@ -143,7 +143,7 @@ def iplot_workhorse(*, data_frame, cols=1, rules):
     )
 
     colormap_selector = pn.widgets.Select(
-        name='Colormap', options=plt.colormaps(), value='jet'
+        name="Colormap", options=plt.colormaps(), value="jet"
     )
 
     # Bind slider names to updated info
@@ -192,20 +192,20 @@ def iplot_workhorse(*, data_frame, cols=1, rules):
             for i in range(len(indices))
         ]
         if dim == 1:
-            res = plot_1D(idx=idx, kw={'active_dim': special_dims[0]})
+            res = plot_1D(idx=idx, kw={"active_dim": special_dims[0]})
         else:
             res = plot_2D(
                 idx=idx,
                 kw={
-                    'transpose': transpose,
-                    'invert_xaxis': invert_xaxis,
-                    'invert_yaxis': invert_yaxis,
-                    'cmap': cmap,
-                    'kdims': [
+                    "transpose": transpose,
+                    "invert_xaxis": invert_xaxis,
+                    "invert_yaxis": invert_yaxis,
+                    "cmap": cmap,
+                    "kdims": [
                         index_names[special_dim_0],
                         index_names[special_dim_1],
                     ],
-                    'active_dims': special_dims,
+                    "active_dims": special_dims,
                 },
             )
 

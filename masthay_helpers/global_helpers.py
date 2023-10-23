@@ -81,8 +81,8 @@ def format_with_black(
 
 
 def function_str_dummy(s):
-    s = s.replace('<locals>', 'locals')
-    s = re.sub(r'(<function .*? at .*?>)', r"'STRING_DUMMY: \1'", s)
+    s = s.replace("<locals>", "locals")
+    s = re.sub(r"(<function .*? at .*?>)", r"'STRING_DUMMY: \1'", s)
     return s
 
 
@@ -590,7 +590,7 @@ def kw_builder(key_builder=None):
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kw):
-            if 'key_builder' in kw:
+            if "key_builder" in kw:
                 raise KeyError(
                     "The keyword argument 'key_builder' is reserved by the"
                     " decorator. Consider: (a) Omitting the decorator, (b)"
@@ -612,25 +612,25 @@ def dupe(stdout=True, stderr=True):
     """
     if stdout:
         dupe.original_stdout = sys.stdout
-        sys.stdout = open(os.devnull, 'w')
+        sys.stdout = open(os.devnull, "w")
     if stderr:
         dupe.original_stderr = sys.stderr
-        sys.stderr = open(os.devnull, 'w')
+        sys.stderr = open(os.devnull, "w")
 
 
 def undupe(stdout=True, stderr=True):
     """
     Restore the original stdout and stderr streams if they were duplicated.
     """
-    if stdout and hasattr(dupe, 'original_stdout'):
+    if stdout and hasattr(dupe, "original_stdout"):
         sys.stdout.close()
         sys.stdout = dupe.original_stdout
-        delattr(dupe, 'original_stdout')
+        delattr(dupe, "original_stdout")
 
-    if stderr and hasattr(dupe, 'original_stderr'):
+    if stderr and hasattr(dupe, "original_stderr"):
         sys.stderr.close()
         sys.stderr = dupe.original_stderr
-        delattr(dupe, 'original_stderr')
+        delattr(dupe, "original_stderr")
 
 
 def dynamic_expand(src, target_shape):
