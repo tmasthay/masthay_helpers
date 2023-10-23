@@ -12,6 +12,7 @@ import black
 import torch
 import inspect
 import pandas as pd
+from returns.curry import curry, partial
 
 
 class GlobalHelpers:
@@ -664,3 +665,10 @@ def kw_peeler(**peel):
         return wrapper
 
     return decorator
+
+
+def extend_dict(d, *, add=None, sub=None):
+    add = {} if add is None else add
+    sub = [] if sub is None else sub
+    u = {**d, **add}
+    return {k: v for k, v in u.items() if k not in sub}
