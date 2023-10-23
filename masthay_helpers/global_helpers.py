@@ -672,3 +672,7 @@ def extend_dict(d, *, add=None, sub=None):
     sub = [] if sub is None else sub
     u = {**d, **add}
     return {k: v for k, v in u.items() if k not in sub}
+
+
+def bstr(*args):
+    return "".join(args)
