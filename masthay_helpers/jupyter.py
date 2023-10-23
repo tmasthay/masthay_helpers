@@ -143,7 +143,7 @@ def iplot_workhorse(*, data_frame, cols=1, rules):
     )
 
     colormap_selector = pn.widgets.Select(
-        name='Colormap', options=plt.colormaps(), value='jet'
+        name='Colormap', options=plt.colormaps(), value='nipy_spectral'
     )
 
     # Bind slider names to updated info
