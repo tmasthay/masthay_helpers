@@ -17,6 +17,7 @@ from returns.curry import curry
 
 
 def get_axes(slices):
+    """EMPTY"""
     return [i for i in range(len(slices)) if slices[i] == slice(None)]
 
 
@@ -144,7 +145,7 @@ def iplot_workhorse(*, data_frame, cols=1, rules):
     )
 
     colormap_selector = pn.widgets.Select(
-        name="Colormap", options=plt.colormaps(), value="nipy_spectral"
+        name='Colormap', options=plt.colormaps(), value='nipy_spectral'
     )
 
     # Bind slider names to updated info
