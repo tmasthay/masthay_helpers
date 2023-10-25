@@ -14,6 +14,7 @@ import inspect
 import pandas as pd
 from returns.curry import curry, partial
 from termcolor import colored
+from tabulate import tabulate as tab
 
 
 class GlobalHelpers:
@@ -685,3 +686,26 @@ def cstr(s, color='red'):
 
 def cprint(s, color="red", **kw):
     print(cstr(s, color), **kw)
+
+
+def ctab(data, *, colors=None, headers, **kw):
+    if len(colors) != len(headers):
+        raise ValueError(
+            f"Number of colors ({len(colors)}) must match number of headers"
+            f" ({len(headers)})."
+            f"    colors = {colors}\n"
+            f"    headers = {headers}"
+        )
+    for i in range(len(colors)):
+        headers[i] = cstr(headers[i], colors[i])
+
+    for i in range(len(data)):
+        if len(data[i]) != len(colors):
+            raise ValueError(
+                f"Row {i} has {len(data[i])} columns, but there are"
+                f" {len(colors)} colors.\n"
+                f"    data[i] = {data[i]}\n"
+                f"    colors = {colors}"
+            )
+        for j in range(len(data[i])):
+            data[i][j] = cstr(data[i][j], colors[j])
