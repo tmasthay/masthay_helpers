@@ -709,3 +709,5 @@ def ctab(data, *, colors=None, headers, **kw):
             )
         for j in range(len(data[i])):
             data[i][j] = cstr(data[i][j], colors[j])
+
+    return tab(data, headers=headers, **kw)
