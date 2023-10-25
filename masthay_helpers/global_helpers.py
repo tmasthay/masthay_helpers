@@ -13,6 +13,7 @@ import torch
 import inspect
 import pandas as pd
 from returns.curry import curry, partial
+from termcolor import colored
 
 
 class GlobalHelpers:
@@ -676,3 +677,11 @@ def extend_dict(d, *, add=None, sub=None):
 
 def bstr(*args):
     return "".join(args)
+
+
+def cstr(s, color='red'):
+    return colored(s, color)
+
+
+def cprint(s, color="red", **kw):
+    print(cstr(s, color), **kw)

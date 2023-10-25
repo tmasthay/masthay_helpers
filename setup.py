@@ -7,7 +7,11 @@ with open("requirements.txt") as f:
 
 setup(
     name="masthay_helpers",
-    version="0.2.74",
+<<<<<<< HEAD
+    version="0.2.75",
+=======
+    version="0.2.73",
+>>>>>>> refactor/iplot_hooks
     author="Tyler Masthay",
     description="Helper functions for repetitive and useful tasks",
     long_description=open("README.md").read(),
