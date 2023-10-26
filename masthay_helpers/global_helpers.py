@@ -696,6 +696,9 @@ def cprint(s, color="red", **kw):
 
 
 def ctab(data, *, colors=None, headers, **kw):
+    if colors is None:
+        colors = [None] * len(headers)
+
     if len(colors) != len(headers):
         raise ValueError(
             f"Number of colors ({len(colors)}) must match number of headers"
