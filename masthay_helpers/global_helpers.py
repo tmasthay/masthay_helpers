@@ -726,3 +726,17 @@ def ctab(data, *, colors=None, headers, **kw):
             data[i][j] = cstr(data[i][j], colors[j])
 
     return tab(data, headers=headers, **kw)
+
+
+def install(**kwargs):
+    traceback_defaults = {
+        'show_locals': True,
+        'width': 160,
+        'locals_max_length': 20,
+        'locals_max_string': 80,
+    }
+    kwargs = {**traceback_defaults, **kwargs}
+    if os.environ('RICH_TRACEBACK', False):
+        from rich.traceback import install
+
+        install(**kwargs)
