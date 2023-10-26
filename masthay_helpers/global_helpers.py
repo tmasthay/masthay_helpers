@@ -685,7 +685,9 @@ def remove_color(text):
     return ansi_escape.sub('', text)
 
 
-def cstr(s, color='red'):
+def cstr(s, color=None):
+    if color is None:
+        return s
     return colored(remove_color(s), color)
 
 
