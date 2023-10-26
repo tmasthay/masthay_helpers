@@ -42,8 +42,13 @@ def sco(s, split=True):
     return u
 
 
+def vco(s):
+    """'vanilla check output'"""
+    return co(s, shell=True).decode('utf-8').strip()
+
+
 def conda_include_everything():
-    inc_paths = ":".join(sco("find $CONDA_PREFIX/inclugetde -type d"))
+    inc_paths = ":".join(sco("find $CONDA_PREFIX/include -type d"))
     c_path = os.environ.get("C_INCLUDE_PATH")
     cmd = "echo 'export C_INCLUDE_PATH=%s:%s'" % (c_path, inc_paths)
     cmd += " | pbcopy"

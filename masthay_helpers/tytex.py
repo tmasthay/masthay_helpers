@@ -39,54 +39,70 @@ def generate_metadata_code(title, author, url):
 def create_sort_function(directive):
     if directive == 'ALPHANUMERIC':
         return lambda x: x
-    elif directive == 'ALPHABETICAL':
-        return lambda x: x
-    elif directive == 'CHRONOLOGICAL':
-        return lambda x: x
-    elif directive == 'REVERSE_CHRONOLOGICAL':
-        return lambda x: x
-    elif directive == 'RANDOM':
-        return lambda x: x
-    else:
+    elif len(directive) == 0:
         return None
+    else:
+        return 'CUSTOM'
 
 
 def sort_articles(*, articles, directive):
     sort_function = create_sort_function(directive)
     if sort_function is None:
         return articles
+    elif sort_function == 'CUSTOM':
+        return sorted(
+            articles, key=lambda x: directive.index(x.replace('.txt', ''))
+        )
     return sorted(articles, key=sort_function)
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--root', type=str, default='tex')
-    args = parser.parse_args()
-    args.root = os.abspath(args.root)
-
-    with open(f'{args.root}/LATEX_ORDER.txt', 'r') as file:
+def main(root):
+    with open(f'{root}/LATEX_ORDER.txt', 'r') as file:
         directive = file.read().strip()
 
+    art_dir = f'{root}/articles'
+    out_dir = f'{root}/output'
+    if not os.path.isdir(art_dir):
+        raise ValueError(f'{art_dir} is not a directory')
+    os.makedirs(out_dir, exist_ok=True)
+
     article_files = sort_articles(
-        articles=os.listdir('articles'), directive=directive
+        articles=os.listdir(art_dir), directive=directive
     )
 
     metadata_file_content = ''
     main_file_content = ''
     for article_file in article_files:
         title, author, url, points = process_article_file(
-            f'articles/{article_file}'
+            f'{art_dir}/{article_file}'
         )
         main_file_content += generate_latex_code(title, author, url, points)
         metadata_file_content += generate_metadata_code(title, author, url)
 
-    os.makedirs(f'{args.root}/output', exist_ok=True)
-    with open(f'{args.root}/output/metadata.tex', 'w') as metadata_file:
+    with open(f'{out_dir}/metadata.tex', 'w') as metadata_file:
         metadata_file.write(metadata_file_content)
 
-    with open(f'{args.root}/output/main.tex', 'w') as main_file:
+    with open(f'{out_dir}/main.tex', 'w') as main_file:
         main_file.write(main_file_content)
 
 
+def cli_main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--root', type=str, default='tex')
+    args = parser.parse_args()
+    args.root = os.abspath(args.root)
+
+    main(args.root)
+
+
+def process_all(root=None):
+    if root is None:
+        root = os.getcwd()
+    all_dirs = os.listdir(root)
+    for directory in all_dirs:
+        if os.path.isdir(directory):
+            main(directory)
+
+
 if __name__ == "__main__":
-    main()
+    cli_main()
