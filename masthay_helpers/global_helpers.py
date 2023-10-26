@@ -680,8 +680,13 @@ def bstr(*args):
     return "".join(args)
 
 
+def remove_color(text):
+    ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
+    return ansi_escape.sub('', text)
+
+
 def cstr(s, color='red'):
-    return colored(s, color)
+    return colored(remove_color(s), color)
 
 
 def cprint(s, color="red", **kw):
