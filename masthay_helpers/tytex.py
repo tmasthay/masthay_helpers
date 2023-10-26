@@ -12,28 +12,24 @@ def process_article_file(filepath):
     return title, author, url, points
 
 
-def generate_latex_code(title, author, url, points):
+def generate_latex_code(title, author, url, points, list_type):
     latex_code = (
         r"\section{%s by %s}\label{%s}\href{%s}{\nameref*{%s}}"
         % (title, author, title.replace(' ', ''), url, title.replace(' ', ''))
         + '\n'
     )
+    latex_code += r"\begin{%s}" % list_type + '\n'
     for point in points:
-        if point.startswith('*'):
-            latex_code += r"    \item %s" % point[1:].strip() + '\n'
+        point = point.strip()
+        if point.strip().startswith('*'):
+            point = point.replace('*', '').strip()
+            latex_code += r"    \begin{%s}" % list_type + '\n'
+            latex_code += r"    \item %s" % point + '\n'
+            latex_code += r"    \end{%s}" % list_type + '\n'
         else:
             latex_code += r"\item %s" % point.strip() + '\n'
+    latex_code += r"\end{%s}" % list_type + '\n\n'
     return latex_code
-
-
-def generate_metadata_code(title, author, url):
-    command_name = title.replace(' ', '')
-    metadata_code = (
-        r"\newcommand{\data%s}[1]{\ifcase#1 %s\or %s\or %s\fi}"
-        % (command_name, title, author, url)
-        + '\n'
-    )
-    return metadata_code
 
 
 def create_sort_function(directive):
@@ -56,7 +52,12 @@ def sort_articles(*, articles, directive):
     return sorted(articles, key=sort_function)
 
 
-def main(root):
+def main(root, list_type='enumerate', verbose=False):
+    def main_print(*args, **kwargs):
+        if verbose:
+            print(*args, **kwargs)
+
+    main_print(f'Processing {root}...', end='')
     with open(f'{root}/LATEX_ORDER.txt', 'r') as file:
         directive = file.read().strip()
 
@@ -70,38 +71,38 @@ def main(root):
         articles=os.listdir(art_dir), directive=directive
     )
 
-    metadata_file_content = ''
     main_file_content = ''
     for article_file in article_files:
         title, author, url, points = process_article_file(
             f'{art_dir}/{article_file}'
         )
-        main_file_content += generate_latex_code(title, author, url, points)
-        metadata_file_content += generate_metadata_code(title, author, url)
-
-    with open(f'{out_dir}/metadata.tex', 'w') as metadata_file:
-        metadata_file.write(metadata_file_content)
+        main_file_content += generate_latex_code(
+            title, author, url, points, list_type
+        )
 
     with open(f'{out_dir}/main.tex', 'w') as main_file:
         main_file.write(main_file_content)
+    main_print('SUCCESS')
 
 
-def cli_main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--root', type=str, default='tex')
-    args = parser.parse_args()
-    args.root = os.abspath(args.root)
-
-    main(args.root)
-
-
-def process_all(root=None):
+def process_all(root=None, list_type='enumerate', verbose=False):
     if root is None:
         root = os.getcwd()
     all_dirs = os.listdir(root)
     for directory in all_dirs:
         if os.path.isdir(directory):
-            main(directory)
+            main(directory, list_type, verbose)
+
+
+def cli_main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--root', type=str, default=os.getcwd())
+    parser.add_argument('-l', '--list_type', type=str, default='enumerate')
+    parser.add_argument('-v', '--verbose', action='store_true')
+    args = parser.parse_args()
+    args.root = os.path.abspath(args.root)
+
+    process_all(args.root, args.list_type, args.verbose)
 
 
 if __name__ == "__main__":
