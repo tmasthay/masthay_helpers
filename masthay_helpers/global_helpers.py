@@ -736,7 +736,7 @@ def install(**kwargs):
         'locals_max_string': 80,
     }
     kwargs = {**traceback_defaults, **kwargs}
-    if os.environ('RICH_TRACEBACK', False):
+    if os.environ.get('RICH_TRACEBACK', False):
         from rich.traceback import install
 
         install(**kwargs)
