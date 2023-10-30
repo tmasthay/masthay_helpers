@@ -78,26 +78,23 @@ def rules_two(
 @curry
 def plot_series(*, data, rules, merge, idx, kw):
     runner = []
-    if( r['plot_type'] == hv.Curve ):
-        linestyles = ['solid', 'dashed', 'dashdot']
-        markers = ['*', 'o', '^', 's', 'p', 'h', 'H', 'D', 'd', 'P', 'X']
-        def line_help(i):
-            if( i < 2 ):
-                return linestyles[i]
-            else:
-                return 'dashed'
-        def marker_help(i):
-            return markers[i % len(markers)]
-     
-    for i in range(data.shape[0]):
+    def styles(i):
         idx_lcl = tuple([i] + list(idx))
         r = rules(idx=idx_lcl, **kw)
-        extras = {}
         if( r['plot_type'] == hv.Curve ):
-            extras = {'linestyle': line_help(i), 'marker': marker_help(i)}
-        curr_args = {**r['loop'], **extras}
-        curr = r["plot_type"](data[idx_lcl], **curr_args).opts(**r["opts"])
-        print(f'opts = {r["opts"]}', flush=True)
+            linestyles = ['solid', 'dashed', 'dashdot']
+            markers = ['*', 'o', '^', 's', 'p', 'h', 'H', 'D', 'd', 'P', 'X']
+
+            extras = {
+                'linestyle': linestyles[i] if i < 2 else 'dashed',
+                'marker': markers[i % len(markers)]
+            }
+            r['loop'].update(extras)
+        return r, idx_lcl
+     
+    for i in range(data.shape[0]):
+        r, idx_lcl = styles(i)
+        curr = r["plot_type"](data[idx_lcl], **r['loop']).opts(**r["opts"])
         runner.append(curr)
     return merge(runner)
 
