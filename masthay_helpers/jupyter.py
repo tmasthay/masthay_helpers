@@ -89,7 +89,7 @@ def plot_series(*, data, rules, merge, idx, kw):
                 'linestyle': linestyles[i] if i < 2 else 'dashed',
                 'marker': markers[i % len(markers)]
             }
-            r['loop'].update(extras)
+            r['opts'].update(extras)
         return r, idx_lcl
      
     for i in range(data.shape[0]):
