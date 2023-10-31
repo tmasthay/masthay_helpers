@@ -15,6 +15,7 @@ import pandas as pd
 from returns.curry import curry, partial
 from termcolor import colored
 from tabulate import tabulate as tab
+from fnmatch import fnmatch
 
 
 class GlobalHelpers:
@@ -740,3 +741,11 @@ def install(**kwargs):
         from rich.traceback import install
 
         install(**kwargs)
+
+
+def find_files(directory, pattern):
+    for root, dirs, files in os.walk(directory):
+        for basename in files:
+            if fnmatch(basename, pattern):
+                filename = os.path.join(root, basename)
+                yield filename
