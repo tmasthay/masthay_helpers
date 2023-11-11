@@ -1,10 +1,11 @@
-import matplotlib.pyplot as plt
-import matplotlib.colors as mcolors
-import numpy as np
-from itertools import product
-import os
-from PIL import Image
 import io
+import os
+from itertools import product
+
+import matplotlib.colors as mcolors
+import matplotlib.pyplot as plt
+import numpy as np
+from PIL import Image
 from tabulate import tabulate as tab
 
 # global pre_colors
@@ -139,12 +140,13 @@ def plot_tensor2d(
 
     # Check tensor shape
     if len(tensor.shape) == 2:
-        # Directly plot the tensor and save
-        plt.imshow(tensor, aspect="auto", **kw)
-        config(labels)
-        plt.savefig("tensor_plot.jpg")
-        plt.clf()
-        return  # exit function after handling this case
+        # # Directly plot the tensor and save
+        # plt.imshow(tensor, aspect="auto", **kw)
+        # config(labels)
+        # plt.savefig("tensor_plot.jpg")
+        # plt.clf()
+        # return  # exit function after handling this case
+        tensor = tensor.unsqueeze(0)
 
     # Ensure tensor has more than 2 dimensions for the following
     assert len(tensor.shape) > 2
@@ -223,11 +225,12 @@ def plot_tensor2d_fast(
     # Check tensor shape
     if len(tensor.shape) == 2:
         # Directly plot the tensor and save
-        plt.imshow(tensor, aspect="auto", **kw)
-        config(labels)
-        plt.savefig(f"tensor_plot.{frame_format}")
-        plt.clf()
-        return  # exit function after handling this case
+        # plt.imshow(tensor, aspect="auto", **kw)
+        # config(labels)
+        # plt.savefig(f"tensor_plot.{frame_format}")
+        # plt.clf()
+        # return  # exit function after handling this casegb
+        tensor = tensor.unsqueeze(-1)
 
     # Ensure tensor has more than 2 dimensions for the following
     assert len(tensor.shape) > 2

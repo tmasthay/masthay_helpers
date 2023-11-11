@@ -1,21 +1,22 @@
-from subprocess import check_output as co
-import os
-import numpy as np
-import subprocess
-import re
-from functools import wraps
-import sys
 import argparse
-import textwrap
-from itertools import product
-import black
-import torch
 import inspect
-import pandas as pd
-from returns.curry import curry, partial
-from termcolor import colored
-from tabulate import tabulate as tab
+import os
+import re
+import subprocess
+import sys
+import textwrap
 from fnmatch import fnmatch
+from functools import wraps
+from itertools import product
+from subprocess import check_output as co
+
+import black
+import numpy as np
+import pandas as pd
+import torch
+from returns.curry import curry, partial
+from tabulate import tabulate as tab
+from termcolor import colored
 
 
 class GlobalHelpers:
@@ -447,11 +448,27 @@ class DotDict:
             [self.has(k) and type(self.get(k)) is lcl_type for k in keys]
         )
 
+    def update(self, d):
+        self.__dict__.update(DotDict.get_dict(d))
+
     def str(self):
-        return prettify_dict(self.__dict__)
+        return format_with_black('DotDict(\n' + str(self.__dict__) + '\n)')
 
     def dict(self):
         return self.__dict__
+
+    def __str__(self):
+        return self.str()
+
+    def __repr__(self):
+        return self.str()
+
+    @staticmethod
+    def get_dict(d):
+        if isinstance(d, DotDict):
+            return d.dict()
+        else:
+            return d
 
 
 def peel_final(x):
@@ -515,15 +532,27 @@ def summarize_tensor(tensor, *, idt_level=0, idt_str="    ", heading="Tensor"):
         tensor = tensor.float()
 
     # Compute various statistics
+    # stats.update(
+    #     dict(
+    #         mean=torch.mean(tensor).item(),
+    #         variance=torch.var(tensor).item(),
+    #         median=torch.median(tensor).item(),
+    #         min=torch.min(tensor).item(),
+    #         max=torch.max(tensor).item(),
+    #         stddev=torch.std(tensor).item(),
+    #     )
+    # )
     stats.update(
-        dict(
-            mean=torch.mean(tensor).item(),
-            variance=torch.var(tensor).item(),
-            median=torch.median(tensor).item(),
-            min=torch.min(tensor).item(),
-            max=torch.max(tensor).item(),
-            stddev=torch.std(tensor).item(),
-        )
+        {
+            'mean': torch.mean(tensor).item(),
+            'variance': torch.var(tensor).item(),
+            'median': torch.median(tensor).item(),
+            'min': torch.min(tensor).item(),
+            'max': torch.max(tensor).item(),
+            'stddev': torch.std(tensor).item(),
+            'Root Mean Square': torch.sqrt(torch.mean(tensor**2)).item(),
+            'L2 Norm': torch.norm(tensor).item(),
+        }
     )
 
     # Prepare the summary string with the desired indentation
@@ -749,3 +778,126 @@ def find_files(directory, pattern):
             if fnmatch(basename, pattern):
                 filename = os.path.join(root, basename)
                 yield filename
+
+
+# def summarize_tensor(tensor, file=None):
+#     """
+#     Outputs summary statistics of a tensor to a file or stdout.
+
+#     Parameters:
+#         tensor (torch.Tensor): The tensor to be summarized.
+#         file (str, optional): The file path to which the summary will be written. Defaults to None (stdout).
+#     """
+#     # Convert tensor to numpy for easier calculations
+#     tensor_np = tensor.cpu().numpy()
+
+#     # Calculate summary statistics
+#     mean = torch.mean(tensor).item()
+#     median = torch.median(tensor).item()
+#     max_val = torch.max(tensor).item()
+#     min_val = torch.min(tensor).item()
+#     var = torch.var(tensor).item()
+#     std = torch.std(tensor).item()
+
+#     # Prepare summary string
+#     summary_str = (
+#         f"Mean: {mean}\n"
+#         f"Median: {median}\n"
+#         f"Max: {max_val}\n"
+#         f"Min: {min_val}\n"
+#         f"Variance: {var}\n"
+#         f"Standard Deviation: {std}\n"
+#     )
+
+#     # Output summary to file or stdout
+#     if file is not None:
+#         with open(file, 'w') as f:
+#             f.write(summary_str)
+
+#     return summary_str
+
+
+def torch_dir_compare(dir1, dir2, out_dir):
+    import matplotlib.pyplot as plt
+
+    from masthay_helpers.typlotlib import plot_tensor2d_fast as plot
+
+    u1 = [e.split('/')[-1] for e in os.listdir(dir1) if e.endswith('.pt')]
+    u2 = [e.split('/')[-1] for e in os.listdir(dir2) if e.endswith('.pt')]
+    u3 = set(u1).intersection(set(u2))
+    # raise ValueError('debug')
+    if not u3:
+        raise ValueError(
+            f'No common files found between directories dir1={dir1},'
+            f' dir2={dir2}'
+        )
+
+    @curry
+    def config(title, *, min_val=None, max_val=None):
+        plt.title(title)
+        plt.set_cmap('seismic')
+        plt.colorbar()
+        if min_val is not None:
+            plt.clim(vmin=min_val, vmax=max_val)
+
+    for u in u3:
+        a = torch.load(os.path.join(dir1, u))
+        b = torch.load(os.path.join(dir2, u))
+        path = f'{out_dir}/figs'
+        os.makedirs(path, exist_ok=True)
+        try:
+            difference = a - b
+            pt_file = os.path.join(out_dir, u)
+            txt_file = os.path.join(out_dir, u.replace('.pt', '.txt'))
+            torch.save(difference, pt_file)
+            summary = summarize_tensor(
+                difference,
+                heading=f'Difference between {dir1}/{u} and {dir2}/{u}',
+            )
+            with open(txt_file, 'w') as f:
+                f.write(summary)
+
+            def my_flatten(x):
+                while len(x.shape) > 3:
+                    new = x.shape[0] * x.shape[1]
+                    x = x.view(new, *x.shape[2:])
+                if len(x.shape) == 3:
+                    x = x.permute(2, 1, 0)
+                return x
+
+            curr_path = os.path.join(path, u.replace('.pt', ''))
+            plot(
+                tensor=my_flatten(difference),
+                labels=[f'Difference {u}'],
+                print_freq=25,
+                path=curr_path,
+                config=config(
+                    min_val=difference.min(), max_val=difference.max()
+                ),
+                verbose=True,
+                name='difference',
+            )
+            plot(
+                tensor=my_flatten(a),
+                labels=[f'{dir1}/{u}'],
+                print_freq=25,
+                path=curr_path,
+                config=config(min_val=a.min(), max_val=a.max()),
+                verbose=True,
+                name=dir1.split('/')[-1],
+            )
+            plot(
+                tensor=my_flatten(b),
+                labels=[f'{dir2}/{u}'],
+                print_freq=25,
+                path=curr_path,
+                config=config(min_val=b.min(), max_val=b.max()),
+                verbose=True,
+                name=dir2.split('/')[-1],
+            )
+        except Exception as e:
+            print(
+                f'Could not compare {u}\n    {dir1} -> {a.shape}\n   '
+                f' {dir2} -> {b.shape}\n    {str(e)}',
+                flush=True,
+            )

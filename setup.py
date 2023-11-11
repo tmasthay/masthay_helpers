@@ -1,4 +1,4 @@
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
 # https://pypi.org/project/masthay-helpers/
 
@@ -7,7 +7,7 @@ with open("requirements.txt") as f:
 
 setup(
     name="masthay_helpers",
-    version="0.2.86",
+    version="0.2.87",
     author="Tyler Masthay",
     description="Helper functions for repetitive and useful tasks",
     long_description=open("README.md").read(),
