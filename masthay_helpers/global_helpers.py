@@ -550,8 +550,8 @@ def summarize_tensor(tensor, *, idt_level=0, idt_str="    ", heading="Tensor"):
             'min': torch.min(tensor).item(),
             'max': torch.max(tensor).item(),
             'stddev': torch.std(tensor).item(),
-            'Root Mean Square': torch.sqrt(torch.mean(tensor**2)).item(),
-            'L2 Norm': torch.norm(tensor).item(),
+            'RMS': torch.sqrt(torch.mean(tensor**2)).item(),
+            'L2': torch.norm(tensor).item(),
         }
     )
 
@@ -817,7 +817,9 @@ def find_files(directory, pattern):
 #     return summary_str
 
 
-def torch_dir_compare(dir1, dir2, out_dir):
+def torch_dir_compare(
+    dir1, dir2, out_dir, *, include_only=None, make_figs=True
+):
     import matplotlib.pyplot as plt
 
     from masthay_helpers.typlotlib import plot_tensor2d_fast as plot
@@ -825,6 +827,9 @@ def torch_dir_compare(dir1, dir2, out_dir):
     u1 = [e.split('/')[-1] for e in os.listdir(dir1) if e.endswith('.pt')]
     u2 = [e.split('/')[-1] for e in os.listdir(dir2) if e.endswith('.pt')]
     u3 = set(u1).intersection(set(u2))
+    if include_only is not None:
+        include_only = [e.replace('.pt', '') + '.pt' for e in include_only]
+        u3 = set(u3).intersection(set(include_only))
     # raise ValueError('debug')
     if not u3:
         raise ValueError(
@@ -865,36 +870,42 @@ def torch_dir_compare(dir1, dir2, out_dir):
                     x = x.permute(2, 1, 0)
                 return x
 
-            curr_path = os.path.join(path, u.replace('.pt', ''))
-            plot(
-                tensor=my_flatten(difference),
-                labels=[f'Difference {u}'],
-                print_freq=25,
-                path=curr_path,
-                config=config(
-                    min_val=difference.min(), max_val=difference.max()
-                ),
-                verbose=True,
-                name='difference',
-            )
-            plot(
-                tensor=my_flatten(a),
-                labels=[f'{dir1}/{u}'],
-                print_freq=25,
-                path=curr_path,
-                config=config(min_val=a.min(), max_val=a.max()),
-                verbose=True,
-                name=dir1.split('/')[-1],
-            )
-            plot(
-                tensor=my_flatten(b),
-                labels=[f'{dir2}/{u}'],
-                print_freq=25,
-                path=curr_path,
-                config=config(min_val=b.min(), max_val=b.max()),
-                verbose=True,
-                name=dir2.split('/')[-1],
-            )
+            if make_figs:
+                curr_path = os.path.join(path, u.replace('.pt', ''))
+                name0 = dir1.split('/')[-1]
+                name1 = dir2.split('/')[-1]
+                if name0 == name1:
+                    name0 = name0 + '0'
+                    name1 = name1 + '1'
+                plot(
+                    tensor=my_flatten(difference),
+                    labels=[f'Difference {u}'],
+                    print_freq=25,
+                    path=curr_path,
+                    config=config(
+                        min_val=difference.min(), max_val=difference.max()
+                    ),
+                    verbose=True,
+                    name='difference',
+                )
+                plot(
+                    tensor=my_flatten(a),
+                    labels=[f'{dir1}/{u}'],
+                    print_freq=25,
+                    path=curr_path,
+                    config=config(min_val=a.min(), max_val=a.max()),
+                    verbose=True,
+                    name=name0,
+                )
+                plot(
+                    tensor=my_flatten(b),
+                    labels=[f'{dir2}/{u}'],
+                    print_freq=25,
+                    path=curr_path,
+                    config=config(min_val=b.min(), max_val=b.max()),
+                    verbose=True,
+                    name=name1,
+                )
         except Exception as e:
             print(
                 f'Could not compare {u}\n    {dir1} -> {a.shape}\n   '
