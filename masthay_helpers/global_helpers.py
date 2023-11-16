@@ -19,6 +19,8 @@ from tabulate import tabulate as tab
 from termcolor import colored
 from rich.table import Table
 from rich.console import Console
+from rich.text import Text
+from rich_tools import df_to_table
 
 
 class GlobalHelpers:
@@ -787,7 +789,19 @@ def find_files(directory, pattern):
                 yield filename
 
 
-def rich_tensor(tensor, name='Tensor', console=None):
+def ismath(x, *, ext=None):
+    symbols = ['+', '-', 'e', '.', 'E', 'j']
+    if ext is not None:
+        symbols.extend(ext)
+
+    for s in symbols:
+        x = x.replace(s, '')
+    return x.isnumeric()
+
+
+def rich_tensor(
+    tensor, *, name='Tensor', filename=None, max_width=None, strip=True, sep=','
+):
     stats = dict(dtype=tensor.dtype, shape=tensor.shape)
     if tensor.dtype == torch.bool:
         return str(stats)
@@ -811,15 +825,34 @@ def rich_tensor(tensor, name='Tensor', console=None):
             'L2': torch.norm(tensor).item(),
         }
     )
-    table = Table(title=name)
-    for k in stats.keys():
-        table.add_column(k)
-    table.add_row(*[str(e) for e in stats.values()])
-    if console is None:
-        return table
-    elif console == 'stdout':
-        console = Console()
-    console.print(table)
+    d1 = {}
+    for k, v in stats.items():
+        if type(v) == float:
+            d1[k] = f'{v:.4f}'
+        else:
+            d1[k] = str(v)
+
+    # Create DataFrame
+    df = pd.DataFrame(stats)
+    table = df_to_table(df)
+
+    if filename is None:
+        return table, df
+    else:
+        df_filename = filename + '.csv'
+        table_filename = filename + '.txt'
+        if filename == 'stdout':
+            console = Console()
+        else:
+            console = Console(file=open(table_filename, 'w'), width=10000)
+        console.print(table)
+        csv_str = df.to_csv(sep=sep)
+        if strip:
+            csv_str = '\n'.join(
+                [sep.join(e.split(sep)[1:]) for e in csv_str.split('\n')]
+            )
+        with open(df_filename, 'w') as f:
+            f.write(csv_str)
 
 
 def torch_dir_compare(
@@ -869,7 +902,7 @@ def torch_dir_compare(
             rich_tensor(
                 difference,
                 name=f'Difference between versions of {u}',
-                console=Console(file=open(txt_file, 'w')),
+                console=Console(file=open(txt_file, 'w'), width=10000),
             )
 
             def my_flatten(x):
