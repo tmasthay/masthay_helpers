@@ -17,6 +17,8 @@ import torch
 from returns.curry import curry, partial
 from tabulate import tabulate as tab
 from termcolor import colored
+from rich.table import Table
+from rich.console import Console
 
 
 class GlobalHelpers:
@@ -419,14 +421,22 @@ def call_vars(*, update=None, **kwargs_dummy):
 
 class DotDict:
     def __init__(self, d):
-        for k, v in d.items():
-            self.set(k, v)
+        if type(d) is DotDict:
+            self.__dict__.update(d.__dict__)
+        else:
+            self.__dict__.update(d)
 
     def set(self, k, v):
         self.__dict__[k] = v
 
     def get(self, k):
         return getattr(self, k)
+
+    def getd(self, k, v):
+        return self.__dict__.get(k, v)
+
+    def setdefault(self, k, v):
+        self.__dict__.setdefault(k, v)
 
     def keys(self):
         return self.__dict__.keys()
@@ -484,7 +494,7 @@ def peel_final(x):
     return y, unravel, ravel
 
 
-def get_print(
+def get_print_deprecated(
     *,
     _verbose,
     l=0,
@@ -498,7 +508,7 @@ def get_print(
 ):
     def print_fn(*args, verbose=1, **kw):
         if verbose <= _verbose:
-            kw["flush"] = True
+            kw["flush"] = kw.get("flush", True)
             iprint(
                 *args, l=l, idt_str=idt_str, cpl=cpl, sep=sep, mode=mode, **kw
             )
@@ -518,6 +528,15 @@ def get_print(
     return print_fn, print_col_fn
 
 
+def get_print(*, _verbose):
+    def print_fn(*args, verbose=1, **kw):
+        if verbose <= _verbose:
+            kw["flush"] = kw.get("flush", True)
+            print(*args, **kw)
+
+    return print_fn, print_fn
+
+
 def summarize_tensor(tensor, *, idt_level=0, idt_str="    ", heading="Tensor"):
     stats = dict(dtype=tensor.dtype, shape=tensor.shape)
     if tensor.dtype == torch.bool:
@@ -530,18 +549,6 @@ def summarize_tensor(tensor, *, idt_level=0, idt_str="    ", heading="Tensor"):
         torch.uint8,
     ]:
         tensor = tensor.float()
-
-    # Compute various statistics
-    # stats.update(
-    #     dict(
-    #         mean=torch.mean(tensor).item(),
-    #         variance=torch.var(tensor).item(),
-    #         median=torch.median(tensor).item(),
-    #         min=torch.min(tensor).item(),
-    #         max=torch.max(tensor).item(),
-    #         stddev=torch.std(tensor).item(),
-    #     )
-    # )
     stats.update(
         {
             'mean': torch.mean(tensor).item(),
@@ -780,41 +787,39 @@ def find_files(directory, pattern):
                 yield filename
 
 
-# def summarize_tensor(tensor, file=None):
-#     """
-#     Outputs summary statistics of a tensor to a file or stdout.
-
-#     Parameters:
-#         tensor (torch.Tensor): The tensor to be summarized.
-#         file (str, optional): The file path to which the summary will be written. Defaults to None (stdout).
-#     """
-#     # Convert tensor to numpy for easier calculations
-#     tensor_np = tensor.cpu().numpy()
-
-#     # Calculate summary statistics
-#     mean = torch.mean(tensor).item()
-#     median = torch.median(tensor).item()
-#     max_val = torch.max(tensor).item()
-#     min_val = torch.min(tensor).item()
-#     var = torch.var(tensor).item()
-#     std = torch.std(tensor).item()
-
-#     # Prepare summary string
-#     summary_str = (
-#         f"Mean: {mean}\n"
-#         f"Median: {median}\n"
-#         f"Max: {max_val}\n"
-#         f"Min: {min_val}\n"
-#         f"Variance: {var}\n"
-#         f"Standard Deviation: {std}\n"
-#     )
-
-#     # Output summary to file or stdout
-#     if file is not None:
-#         with open(file, 'w') as f:
-#             f.write(summary_str)
-
-#     return summary_str
+def rich_tensor(tensor, name='Tensor', console=None):
+    stats = dict(dtype=tensor.dtype, shape=tensor.shape)
+    if tensor.dtype == torch.bool:
+        return str(stats)
+    elif tensor.dtype in [
+        torch.int8,
+        torch.int16,
+        torch.int32,
+        torch.int64,
+        torch.uint8,
+    ]:
+        tensor = tensor.float()
+    stats.update(
+        {
+            'mean': torch.mean(tensor).item(),
+            'variance': torch.var(tensor).item(),
+            'median': torch.median(tensor).item(),
+            'min': torch.min(tensor).item(),
+            'max': torch.max(tensor).item(),
+            'stddev': torch.std(tensor).item(),
+            'RMS': torch.sqrt(torch.mean(tensor**2)).item(),
+            'L2': torch.norm(tensor).item(),
+        }
+    )
+    table = Table(title=name)
+    for k in stats.keys():
+        table.add_column(k)
+    table.add_row(*[str(e) for e in stats.values()])
+    if console is None:
+        return table
+    elif console == 'stdout':
+        console = Console()
+    console.print(table)
 
 
 def torch_dir_compare(
@@ -855,12 +860,17 @@ def torch_dir_compare(
             pt_file = os.path.join(out_dir, u)
             txt_file = os.path.join(out_dir, u.replace('.pt', '.txt'))
             torch.save(difference, pt_file)
-            summary = summarize_tensor(
+            # summary = summarize_tensor(
+            #     difference,
+            #     heading=f'Difference between {dir1}/{u} and {dir2}/{u}',
+            # )
+            # with open(txt_file, 'w') as f:
+            #     f.write(summary)
+            rich_tensor(
                 difference,
-                heading=f'Difference between {dir1}/{u} and {dir2}/{u}',
+                name=f'Difference between versions of {u}',
+                console=Console(file=open(txt_file, 'w')),
             )
-            with open(txt_file, 'w') as f:
-                f.write(summary)
 
             def my_flatten(x):
                 while len(x.shape) > 3:
@@ -912,3 +922,8 @@ def torch_dir_compare(
                 f' {dir2} -> {b.shape}\n    {str(e)}',
                 flush=True,
             )
+
+    c = '\n    '
+    u4 = [e.replace('.pt', '.txt') for e in u3]
+    u5 = [f'{e} -> {f}' for e, f in zip(u3, u4)]
+    print(f'Files written to Directory: {out_dir}\n    {c.join(u5)}')
