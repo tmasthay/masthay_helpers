@@ -628,8 +628,11 @@ def get_full_slices(indices):
     return list(np.where(np.array(indices) == slice(None))[0])
 
 
-def subdict(d, keys):
-    return {k: d[k] for k in keys}
+def subdict(d, *, include=None, exclude=None):
+    include = list(d.keys()) if include is None else include
+    exclude = [] if exclude is None else exclude
+    full_include = set(include).difference(exclude)
+    return {k: d[k] for k in full_include}
 
 
 def kw_builder(key_builder=None):
@@ -960,3 +963,10 @@ def torch_dir_compare(
     u4 = [e.replace('.pt', '.txt') for e in u3]
     u5 = [f'{e} -> {f}' for e, f in zip(u3, u4)]
     print(f'Files written to Directory: {out_dir}\n    {c.join(u5)}')
+
+
+def torch_math(f, *args):
+    grids = torch.meshgrid(*[torch.arange(len(arg)) for arg in args])
+    values = [arg[grid] for arg, grid in zip(args, grids)]
+    result = f(*values)
+    return result

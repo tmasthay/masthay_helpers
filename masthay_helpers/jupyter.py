@@ -26,13 +26,21 @@ def rules_one(*, opts_info, loop_info, data, column_names, idx, active_dim):
     loop = {"label": loop_info["labels"][idx[0]]}
 
     def hook(plot, element):
-        plot.handles["axis"].set_yscale(
-            *opts_info["yscale"]["args"], **opts_info["yscale"]["kwargs"]
-        )
+        opts_info.setdefault("yscale", {"args": [], "kwargs": {}})
+        # plot.handles["axis"].set_yscale(
+        #     *opts_info["yscale"]["args"], **opts_info["yscale"]["kwargs"]
+        # )
 
     opts_info.setdefault("yscale", {"args": [], "kwargs": {}})
     opts_info["hooks"] = opts_info.get("hooks", []) + [hook]
-    opts_info["ylim"] = opts_info.get("ylim", (data.min(), data.max()))
+
+    fixed_indices = [
+        slice(None) if dim == active_dim else idx[dim]
+        for dim in range(data.ndim)
+    ]
+    active_data_slice = data[tuple(fixed_indices)]
+    active_min, active_max = active_data_slice.min(), active_data_slice.max()
+    opts_info["ylim"] = opts_info.get("ylim", (active_min, active_max))
     opts = {
         "ylim": opts_info["ylim"],
         "hooks": opts_info["hooks"],
@@ -78,20 +86,21 @@ def rules_two(
 @curry
 def plot_series(*, data, rules, merge, idx, kw):
     runner = []
+
     def styles(i):
         idx_lcl = tuple([i] + list(idx))
         r = rules(idx=idx_lcl, **kw)
-        if( r['plot_type'] == hv.Curve ):
+        if r['plot_type'] == hv.Curve:
             linestyles = ['solid', 'dashed', 'dashdot']
             markers = ['*', 'o', '^', 's', 'p', 'h', 'H', 'D', 'd', 'P', 'X']
 
             extras = {
                 'linestyle': linestyles[i] if i < 2 else 'dashed',
-                'marker': markers[i % len(markers)]
+                'marker': markers[i % len(markers)],
             }
             r['opts'].update(extras)
         return r, idx_lcl
-     
+
     for i in range(data.shape[0]):
         r, idx_lcl = styles(i)
         curr = r["plot_type"](data[idx_lcl], **r['loop']).opts(**r["opts"])
@@ -245,6 +254,9 @@ def iplot_workhorse(*, data_frame, cols=1, rules):
     return layout
 
 
-def iplot(*, data, column_names, cols, rules):
-    data_frame = pandify(data, column_names)
+def iplot(*, data, column_names=None, cols, rules):
+    if column_names is not None:
+        data_frame = pandify(data, column_names)
+    else:
+        data_frame = data
     return iplot_workhorse(data_frame=data_frame, cols=cols, rules=rules)
