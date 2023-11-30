@@ -21,7 +21,7 @@ def curry_builtin(sig, module):
     except NameError:
         return_type = f'{module}.{return_type}'
         try:
-            eval(return_type)
+            exec(f'import {module}\n{return_type}')
         except NameError:
             return_type = 'Any'
 
@@ -62,7 +62,7 @@ def curry_builtin(sig, module):
 
     # Compile and return the wrapper function
     namespace = {}
-    exec(def_str, {'module': module}, namespace)
+    exec(def_str, {**globals(), 'module': module}, namespace)
     return returns.curry.curry(namespace[func_name])
 
 
@@ -94,9 +94,13 @@ def curry(f, *, marker='.. function:: ', dispatch=0):
         )
 
 
-if __name__ == "__main__":
+def example():
     import torch
     import inspect
 
     print(inspect.signature(curry(torch.mean)))
     print(inspect.signature(curry(torch.mean, dispatch=1)))
+
+
+if __name__ == "__main__":
+    example()
