@@ -434,6 +434,12 @@ class DotDict:
     def get(self, k):
         return getattr(self, k)
 
+    def __setitem__(self, k, v):
+        self.set(k, v)
+
+    def __getitem__(self, k):
+        return self.get(k)
+
     def getd(self, k, v):
         return self.__dict__.get(k, v)
 
