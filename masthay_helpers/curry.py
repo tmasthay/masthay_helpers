@@ -5,6 +5,9 @@ import types
 import returns.curry
 from typing import Any
 import inspect
+import importlib
+import os
+from masthay_helpers.curry_packages.requirements import *
 
 
 def curry_builtin(sig, module):
@@ -87,7 +90,7 @@ def sig_builtin(f, *, marker='.. function:: ', dispatch=0):
 
 def curry(f, *, marker='.. function:: ', dispatch=0):
     try:
-        return returns.curry(f)
+        return returns.curry.curry(f)
     except Exception:
         return curry_builtin(
             sig_builtin(f, marker=marker, dispatch=dispatch), f.__module__
@@ -95,11 +98,22 @@ def curry(f, *, marker='.. function:: ', dispatch=0):
 
 
 def example():
-    import torch
-    import inspect
+    # import torch
 
-    print(inspect.signature(curry(torch.mean)))
-    print(inspect.signature(curry(torch.mean, dispatch=1)))
+    mean0 = curry(torch.mean)
+    mean1 = curry(torch.mean, dispatch=1)
+
+    sig = inspect.signature
+    print(sig(mean0))
+    print(sig(mean1))
+
+    mean_along_rows = mean1(dim=0)
+    mean_along_cols = mean1(dim=1)
+    t = torch.tensor([[1.0, 2.0], [3.0, 4.0]])
+    print(f't={t}')
+    print(f'mean={mean0(t)}')
+    print(f'mean_along_rows={mean_along_rows(t)}')
+    print(f'mean_along_cols={mean_along_cols(t)}')
 
 
 if __name__ == "__main__":
