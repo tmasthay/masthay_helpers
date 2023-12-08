@@ -864,6 +864,51 @@ def rich_tensor(
             f.write(csv_str)
 
 
+def torch_dir_see(
+    dir1=None,
+    *,
+    filename=None,
+    include_only=None,
+    make_figs=False,
+    max_width=None,
+    strip=True,
+    sep=',',
+):
+    dir1 = dir1 if dir1 else os.getcwd()
+
+    if dir1 is None:
+        dir1 = os.getcwd()
+    import matplotlib.pyplot as plt
+    from masthay_helpers.typlotlib import plot_tensor2d_fast as plot
+
+    u = [e.split('/')[-1] for e in os.listdir(dir1) if e.endswith('.pt')]
+    if include_only is not None:
+        include_only = [e.replace('.pt', '') + '.pt' for e in include_only]
+        u = set(u).intersection(set(include_only))
+
+    if u:
+        print(f'Files in Directory: {dir1}')
+        for e in u:
+            a = torch.load(os.path.join(dir1, e))
+            rich_tensor(
+                a,
+                name=e.replace('.pt', ''),
+                filename=filename,
+                max_width=max_width,
+                strip=strip,
+                sep=sep,
+            )
+            if make_figs:
+                curr_path = os.path.join(dir1, 'figs', e.replace('.pt', ''))
+                plot(
+                    tensor=a,
+                    labels=[e],
+                    print_freq=25,
+                    path=curr_path,
+                    verbose=True,
+                )
+
+
 def torch_dir_compare(
     dir1, dir2, out_dir, *, include_only=None, make_figs=True
 ):
@@ -976,3 +1021,17 @@ def torch_math(f, *args):
     values = [arg[grid] for arg, grid in zip(args, grids)]
     result = f(*values)
     return result
+
+
+def flip_dict(d):
+    try:
+        u = {}
+        for outer_key, inner_dict in d.items():
+            for inner_key, value in inner_dict.items():
+                u.setdefault(inner_key, {})
+                u[inner_key][outer_key] = value
+    except Exception as e:
+        print(f'Could not flip dictionary due to error. Here is the dict:')
+        # print(prettify_dict(d))
+        raise e
+    return u
