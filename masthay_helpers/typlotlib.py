@@ -131,6 +131,23 @@ def set_color_plot_static(
 def plot_tensor2d(
     *, tensor, labels, config=None, verbose=False, print_freq=10, delay=10, **kw
 ):
+    """
+    Plot 2D slices of a tensor and save them as JPG files. Convert the JPG files to a GIF.
+
+    Args:
+        tensor (torch.Tensor): The input tensor.
+        labels (List[str]): The labels for each dimension of the tensor.
+        config (Callable): A function to configure the plot title. Defaults to None.
+        verbose (bool): Whether to print progress messages. Defaults to False.
+        print_freq (int): The frequency at which to print progress messages. Defaults to 10.
+        delay (int): The delay between frames in the generated GIF. Defaults to 10.
+        **kw: Additional keyword arguments to pass to the `imshow` function.
+
+    Returns:
+        None
+
+
+    """
     if config is None:
         config = lambda x: plt.title(x)
 
@@ -140,12 +157,6 @@ def plot_tensor2d(
 
     # Check tensor shape
     if len(tensor.shape) == 2:
-        # # Directly plot the tensor and save
-        # plt.imshow(tensor, aspect="auto", **kw)
-        # config(labels)
-        # plt.savefig("tensor_plot.jpg")
-        # plt.clf()
-        # return  # exit function after handling this case
         tensor = tensor.unsqueeze(0)
 
     # Ensure tensor has more than 2 dimensions for the following
@@ -210,6 +221,46 @@ def plot_tensor2d_fast(
     name="movie",
     **kw,
 ):
+    """
+    Plot a 2D slice from a 3D or higher-dimensional tensor and save it as a movie.
+
+    Args:
+        tensor (torch.Tensor): The input tensor of shape (..., H, W).
+        labels (List[str]): The labels for each dimension after the first two.
+        config (Callable): A function to configure the plot title. Default is None.
+        verbose (bool): Whether to print progress messages. Default is False.
+        print_freq (int): The frequency of progress messages. Default is 10.
+        duration (int): The duration (in milliseconds) of each frame in the movie. Default is 100.
+        frame_format (str): The format of the individual frames. Default is "png".
+        movie_format (str): The format of the final movie. Default is "gif".
+        path (str): The directory to save the movie. Default is current directory.
+        name (str): The name of the movie file. Default is "movie".
+        **kw: Additional keyword arguments to pass to plt.imshow().
+
+    Returns:
+        None
+
+    Example:
+        # Example usage with 3D data
+        import torch
+        import matplotlib.pyplot as plt
+
+        # Create a 3D tensor
+        tensor = torch.randn(10, 20, 30)
+
+        # Define labels for each dimension
+        labels = ["X", "Y", "Z"]
+
+        # Configure the plot
+        def config(title):
+            plt.title(title)
+            plt.xlabel(labels[0])
+            plt.ylabel(labels[1])
+
+        # Plot and save the movie
+        plot_tensor2d_fast(tensor=tensor, labels=labels, config=config)
+    """
+
     def printv(*args, **kwargs):
         kwargs["flush"] = True
         if verbose:
@@ -240,6 +291,7 @@ def plot_tensor2d_fast(
 
     frames = []  # list to store each frame in memory
     N = np.prod(tensor.shape[2:])
+    labels = labels[2:]
     printv("DONE")
     # Iterate over all combinations of indices
     for indices in product(*dims):
