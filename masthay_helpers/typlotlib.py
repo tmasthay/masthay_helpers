@@ -7,6 +7,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image
 from tabulate import tabulate as tab
+from returns.curry import curry
+import glob
+import copy
 
 # global pre_colors
 pre_colors = list(mcolors.CSS4_COLORS.keys())
@@ -340,3 +343,77 @@ def plot_tensor2d_fast(
     printv("DONE")
 
     buf.close()
+
+
+def make_gifs(
+    *,
+    in_dir,
+    out_dir=None,
+    targets='all',
+    opts,
+    config=None,
+    config1d=None,
+    **kw,
+):
+    import torch
+
+    out_dir = out_dir if out_dir else in_dir
+    if targets == 'all':
+        torch_files = glob.glob(os.path.join(in_dir, '*.pt'))
+    else:
+
+        def expand_target(x):
+            if x.startswith(os.sep):
+                return x.replace('.pt', '') + '.pt'
+            return os.path.join(in_dir, x).replace('.pt', '') + '.pt'
+
+        torch_files = list(map(expand_target, targets))
+        if not all(os.path.exists(e) for e in torch_files):
+            raise ValueError(f'Not all files in targets exist: {torch_files}')
+
+    file_map = {os.path.basename(e).replace('.pt', ''): e for e in torch_files}
+    if config is None:
+
+        @curry
+        def config(title, *, labels):
+            plt.title(title)
+            plt.xlabel(labels[0])
+            plt.ylabel(labels[1])
+            plt.colorbar()
+
+    if config1d is None:
+
+        def config1d(title, *, labels):
+            plt.title(title)
+            plt.xlabel(labels[0])
+            plt.ylabel(labels[1])
+
+    for k, v in file_map.items():
+        if k not in opts.keys():
+            raise ValueError(f'k={k} not in opts.keys()={opts.keys()}')
+        u = torch.load(v)
+        opts[k]['permute'] = opts[k].get('permute', list(range(u.ndim)))
+        u = u.permute(opts[k]['permute'])
+        opts[k]['tensor'] = u
+
+    for k in opts.keys():
+        if 'permute' in opts[k].keys():
+            del opts[k]['permute']
+
+    os.makedirs(out_dir, exist_ok=True)
+
+    print(f'Dumping plots to {os.path.abspath(out_dir)}')
+    for k, v in opts.items():
+        print(f'Plotting {k}...', end='')
+        if opts[k]['tensor'].ndim == 1:
+            config1d(title=k, labels=v['labels'])
+            y = opts[k]['tensor']
+            x = torch.arange(len(y))
+            plt.plot(x, y)
+            plt.savefig(os.path.join(out_dir, f'{k}.jpg'))
+            plt.clf()
+        else:
+            plot_tensor2d_fast(
+                **v, config=config(labels=v['labels']), name=k, **kw
+            )
+        print('DONE')
