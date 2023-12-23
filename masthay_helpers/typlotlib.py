@@ -345,6 +345,49 @@ def plot_tensor2d_fast(
     buf.close()
 
 
+def plot_tensor2d_subplot(
+    *,
+    tensor,
+    labels,
+    config=None,
+    verbose=False,
+    print_freq=10,
+    duration=100,
+    frame_format="png",
+    movie_format="gif",
+    path=".",
+    name="movie",
+    subplot_shape='horizontal',
+    **kw,
+):
+    def printv(*args, **kwargs):
+        kwargs["flush"] = True
+        if verbose:
+            print(*args, **kwargs)
+
+    printv("Setting up config...", end="")
+    if config is None:
+        config = lambda x: plt.title(x)
+
+    frame_format = frame_format.lower().replace(".", "")
+    movie_format = movie_format.lower().replace(".", "")
+
+    if tensor.shape <= 2:
+        raise ValueError(
+            'plot_tensor2d_subplot expects a tensor with at least 3 dimensions'
+            f' plotting {tensor.shape[0]} subplots of shape {tensor.shape[1:]},'
+            f' got {tensor.shape} from you'
+        )
+    if len(tensor.shape) == 2:
+        # Directly plot the tensor and save
+        # plt.imshow(tensor, aspect="auto", **kw)
+        # config(labels)
+        # plt.savefig(f"tensor_plot.{frame_format}")
+        # plt.clf()
+        # return  # exit function after handling this casegb
+        tensor = tensor.unsqueeze(-1)
+
+
 def make_gifs(
     *,
     in_dir,

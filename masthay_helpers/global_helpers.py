@@ -21,6 +21,8 @@ from rich.table import Table
 from rich.console import Console
 from rich.text import Text
 from rich_tools import df_to_table
+import hydra
+from hydra import initialize, compose
 
 
 class GlobalHelpers:
@@ -634,11 +636,11 @@ def get_full_slices(indices):
     return list(np.where(np.array(indices) == slice(None))[0])
 
 
-def subdict(d, *, include=None, exclude=None):
-    include = list(d.keys()) if include is None else include
-    exclude = [] if exclude is None else exclude
-    full_include = set(include).difference(exclude)
-    return {k: d[k] for k in full_include}
+def subdict(d, *, inc=None, exc=None):
+    inc = list(d.keys()) if inc is None else inc
+    exc = [] if exc is None else exc
+    full_inc = set(inc).difference(exc)
+    return {k: d[k] for k in full_inc}
 
 
 def kw_builder(key_builder=None):
@@ -1035,3 +1037,88 @@ def flip_dict(d):
         # print(prettify_dict(d))
         raise e
     return u
+
+
+def hydra_cfg(f):
+    from hydra import initialize, compose
+
+    @wraps(f)
+    def wrapper(
+        *args,
+        config_path,
+        config_name,
+        version_base=None,
+        overrides=None,
+        return_hydra_config=False,
+        **kw,
+    ):
+        with initialize(
+            config_path=config_path, version_base=version_base
+        ) as cfg:
+            cfg = compose(
+                config_name=config_name,
+                overrides=overrides,
+                return_hydra_config=return_hydra_config,
+            )
+        return f(cfg, *args, **kw)
+
+    return wrapper
+
+
+def hydra_kw(*, use_cfg=False, protect_kw=True):
+    def decorator(f):
+        @wraps(f)
+        def wrapper(
+            *args,
+            config_path=None,
+            config_name=None,
+            version_base=None,
+            overrides=None,
+            return_hydra_config=False,
+            **kw,
+        ):
+            if config_path is None or config_name is None:
+                cfg = {}
+            else:
+                with initialize(
+                    config_path=config_path, version_base=version_base
+                ) as cfg:
+                    cfg = compose(
+                        config_name=config_name,
+                        overrides=overrides,
+                        return_hydra_config=return_hydra_config,
+                    )
+            overlapping_keys = set(cfg.keys()).intersection(set(kw.keys()))
+            for key in overlapping_keys:
+                kw[key] = cfg[key]
+                if protect_kw:
+                    del cfg[key]
+            if use_cfg:
+                return f(cfg, *args, **kw)
+            else:
+                return f(*args, **kw)
+
+        return wrapper
+
+    return decorator
+
+
+# def get_hydra_cfg(
+#     *,
+#     config_path='config',
+#     config_name='config.yaml',
+#     version_base=None,
+#     overrides=None,
+#     return_hydra_config=False,
+#     allow_cwd=True,
+# ):
+#     if allow_cwd:
+#         hydra.GlobalHydra.instance().clear()
+#         hydra.initialize_config_dir(config_dir=os.getcwd())
+#     with initialize(config_path=config_path, version_base=version_base) as cfg:
+#         cfg = compose(
+#             config_name=config_name,
+#             overrides=overrides,
+#             return_hydra_config=return_hydra_config,
+#         )
+#     return cfg
