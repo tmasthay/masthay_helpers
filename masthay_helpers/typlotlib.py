@@ -361,6 +361,22 @@ def plot_tensor2d_subplot(
         if verbose:
             print(*args, **kwargs)
 
+    if type(tensor) != list:
+        printv('Converting tensor to list')
+        tensor = [e for e in tensor]
+
+    for i, e in enumerate(tensor):
+        while len(e.shape) <= 2:
+            printv(f'Expanding tensor[{i}] to shape {e.shape + (1,)}')
+            tensor[i] = tensor[i].unsqueeze(-1)
+
+    loop_indices = np.array([e.shape[2:] for e in tensor])
+    if len(np.where(loop_indices != loop_indices[0])[0]) > 0:
+        raise ValueError(
+            'All dimensions except the first two must be the same for all'
+            f' tensors. Got {set(loop_indices)}'
+        )
+
     layout_args = layout_args or {}
     if config is None:
 
@@ -377,29 +393,22 @@ def plot_tensor2d_subplot(
     frame_format = frame_format.lower().replace(".", "")
     movie_format = movie_format.lower().replace(".", "")
 
-    while len(tensor.shape) <= 2:
-        # Directly plot the tensor and save
-        # plt.imshow(tensor, aspect="auto", **kw)
-        # config(labels)
-        # plt.savefig(f"tensor_plot.{frame_format}")
-        # plt.clf()
-        # return  # exit function after handling this casegb
-        tensor = tensor.unsqueeze(-1)
-
     if subplot_shape == 'horizontal':
-        subplot_shape = (1, tensor.shape[0])
+        subplot_shape = (1, len(tensor))
     elif subplot_shape == 'vertical':
-        subplot_shape = (tensor.shape[0], 1)
+        subplot_shape = (len(tensor), 1)
 
     fig, axs = plt.subplots(*subplot_shape)
-    if( type(axs[0]) != np.ndarray):
+    if type(axs) != np.ndarray:
+        axs = np.array([axs])
+    if type(axs[0]) != np.ndarray:
         axs = np.array([axs])
     fig.set_size_inches(*fig_size)
     fig.tight_layout(**layout_args)
 
-    dims = [range(s) for s in tensor.shape[3:]]
+    dims = [range(s) for s in tensor[0].shape[2:]]
     frames = []
-    N = np.prod(tensor.shape[3:])
+    N = np.prod(tensor[0].shape[2:])
 
     def sub_idx(k):
         if subplot_shape[0] == 1:
@@ -410,9 +419,9 @@ def plot_tensor2d_subplot(
 
     start_time = time()
     for indices in product(*dims):
-        for i in range(tensor.shape[0]):
-            slices = [i, slice(None), slice(None)] + list(indices)
-            slice_ = tensor[slices]
+        for i in range(len(tensor)):
+            slices = [slice(None), slice(None)] + list(indices)
+            slice_ = tensor[i][slices]
 
             # Generate title based on labels and indices
             curr_title = (
@@ -436,18 +445,22 @@ def plot_tensor2d_subplot(
         # buf.seek(0)
         # frames.append(Image.open(buf))
         fig.canvas.draw()
-        frame = Image.frombytes('RGB', fig.canvas.get_width_height(), fig.canvas.tostring_rgb())
+        frame = Image.frombytes(
+            'RGB', fig.canvas.get_width_height(), fig.canvas.tostring_rgb()
+        )
         frames.append(frame)
 
         plt.clf()
+        plt.close(fig)
         fig, axs = plt.subplots(*subplot_shape)
         fig.set_size_inches(*fig_size)
         fig.tight_layout(**layout_args)
-        if( type(axs[0]) != np.ndarray):
+        if type(axs) != np.ndarray:
+            axs = np.array([axs])
+        if type(axs[0]) != np.ndarray:
             axs = np.array([axs])
             # fig.set_size_inches(18.5, 10.5)
             # fig.tight_layout(pad=3.0)
-
 
         if len(frames) % print_freq == 0:
             full_time = time() - start_time
@@ -458,7 +471,7 @@ def plot_tensor2d_subplot(
     os.makedirs(abs_path, exist_ok=True)
     name = name.replace(f".{movie_format}", "")
     plot_name = os.path.join(abs_path, name) + f".{movie_format}"
-    printv(f"Creating GIF at {plot_name}...", end="")
+    printv(f"Creating GIF at {plot_name} ...", end="")
     frames[0].save(
         plot_name,
         format=movie_format.upper(),

@@ -559,18 +559,16 @@ def summarize_tensor(tensor, *, idt_level=0, idt_str="    ", heading="Tensor"):
         torch.uint8,
     ]:
         tensor = tensor.float()
-    stats.update(
-        {
-            'mean': torch.mean(tensor).item(),
-            'variance': torch.var(tensor).item(),
-            'median': torch.median(tensor).item(),
-            'min': torch.min(tensor).item(),
-            'max': torch.max(tensor).item(),
-            'stddev': torch.std(tensor).item(),
-            'RMS': torch.sqrt(torch.mean(tensor**2)).item(),
-            'L2': torch.norm(tensor).item(),
-        }
-    )
+    stats.update({
+        'mean': torch.mean(tensor).item(),
+        'variance': torch.var(tensor).item(),
+        'median': torch.median(tensor).item(),
+        'min': torch.min(tensor).item(),
+        'max': torch.max(tensor).item(),
+        'stddev': torch.std(tensor).item(),
+        'RMS': torch.sqrt(torch.mean(tensor**2)).item(),
+        'L2': torch.norm(tensor).item(),
+    })
 
     # Prepare the summary string with the desired indentation
     indent = idt_str * idt_level
@@ -824,18 +822,16 @@ def rich_tensor(
         torch.uint8,
     ]:
         tensor = tensor.float()
-    stats.update(
-        {
-            'mean': torch.mean(tensor).item(),
-            'variance': torch.var(tensor).item(),
-            'median': torch.median(tensor).item(),
-            'min': torch.min(tensor).item(),
-            'max': torch.max(tensor).item(),
-            'stddev': torch.std(tensor).item(),
-            'RMS': torch.sqrt(torch.mean(tensor**2)).item(),
-            'L2': torch.norm(tensor).item(),
-        }
-    )
+    stats.update({
+        'mean': torch.mean(tensor).item(),
+        'variance': torch.var(tensor).item(),
+        'median': torch.median(tensor).item(),
+        'min': torch.min(tensor).item(),
+        'max': torch.max(tensor).item(),
+        'stddev': torch.std(tensor).item(),
+        'RMS': torch.sqrt(torch.mean(tensor**2)).item(),
+        'L2': torch.norm(tensor).item(),
+    })
     d1 = {}
     for k, v in stats.items():
         if type(v) == float:

@@ -26,11 +26,21 @@ def test_plot_tensor2d_subplot(tensor):
 def main():
     tensor = torch.rand(6, 5, 5, 2, 2, 3)
     labels = [f'dim_{i}' for i in range(len(tensor.shape[1:]))]
-    final_labels = [[f'SUBPLOT_NAME_{i}'] + labels for i in range(tensor.shape[0])]
+    final_labels = [
+        [f'SUBPLOT_NAME_{i}'] + labels for i in range(tensor.shape[0])
+    ]
 
-    layout_args={'pad': 3.0, 'h_pad': 5.0, 'w_pad': 0.0}
+    layout_args = {'pad': 3.0, 'h_pad': 5.0, 'w_pad': 0.0}
 
-    plot_tensor2d_subplot(tensor=tensor, labels=final_labels, print_freq=1, verbose=True, subplot_shape=(3,2), layout_args=layout_args, duration=400)
+    plot_tensor2d_subplot(
+        tensor=tensor,
+        labels=final_labels,
+        print_freq=1,
+        verbose=True,
+        subplot_shape=(3, 2),
+        layout_args=layout_args,
+        duration=400,
+    )
 
 
 if __name__ == '__main__':
