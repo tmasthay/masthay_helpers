@@ -10,20 +10,14 @@ from tabulate import tabulate as tab
 from returns.curry import curry
 import glob
 import copy
+from time import time
 
 # global pre_colors
 pre_colors = list(mcolors.CSS4_COLORS.keys())
 pre_colors_dict = mcolors.CSS4_COLORS
 
 
-def colors_str(
-    *,
-    colors,
-    normalize=True,
-    ncols=5,
-    tablefmt="plain",
-    **kw,
-):
+def colors_str(*, colors, normalize=True, ncols=5, tablefmt="plain", **kw):
     strings = []
     longest_key = max(len(k) for k in colors.keys())
     for name, hex_color in colors.items():
@@ -358,12 +352,23 @@ def plot_tensor2d_subplot(
     path=".",
     name="movie",
     subplot_shape='horizontal',
+    fig_size=(18.5, 10.5),
+    layout_args=None,
     **kw,
 ):
     def printv(*args, **kwargs):
         kwargs["flush"] = True
         if verbose:
             print(*args, **kwargs)
+
+    layout_args = layout_args or {}
+    if config is None:
+
+        def config_helper(fig, ax, im, title):
+            ax.set_title(title)
+            fig.colorbar(im, ax=ax)
+
+        config = config_helper
 
     printv("Setting up config...", end="")
     if config is None:
@@ -372,13 +377,7 @@ def plot_tensor2d_subplot(
     frame_format = frame_format.lower().replace(".", "")
     movie_format = movie_format.lower().replace(".", "")
 
-    if tensor.shape <= 2:
-        raise ValueError(
-            'plot_tensor2d_subplot expects a tensor with at least 3 dimensions'
-            f' plotting {tensor.shape[0]} subplots of shape {tensor.shape[1:]},'
-            f' got {tensor.shape} from you'
-        )
-    if len(tensor.shape) == 2:
+    while len(tensor.shape) <= 2:
         # Directly plot the tensor and save
         # plt.imshow(tensor, aspect="auto", **kw)
         # config(labels)
@@ -386,6 +385,88 @@ def plot_tensor2d_subplot(
         # plt.clf()
         # return  # exit function after handling this casegb
         tensor = tensor.unsqueeze(-1)
+
+    if subplot_shape == 'horizontal':
+        subplot_shape = (1, tensor.shape[0])
+    elif subplot_shape == 'vertical':
+        subplot_shape = (tensor.shape[0], 1)
+
+    fig, axs = plt.subplots(*subplot_shape)
+    if( type(axs[0]) != np.ndarray):
+        axs = np.array([axs])
+    fig.set_size_inches(*fig_size)
+    fig.tight_layout(**layout_args)
+
+    dims = [range(s) for s in tensor.shape[3:]]
+    frames = []
+    N = np.prod(tensor.shape[3:])
+
+    def sub_idx(k):
+        if subplot_shape[0] == 1:
+            return 0, k
+        elif subplot_shape[1] == 1:
+            return k, 0
+        return k // subplot_shape[1], k % subplot_shape[1]
+
+    start_time = time()
+    for indices in product(*dims):
+        for i in range(tensor.shape[0]):
+            slices = [i, slice(None), slice(None)] + list(indices)
+            slice_ = tensor[slices]
+
+            # Generate title based on labels and indices
+            curr_title = (
+                labels[i][0]
+                + "\n("
+                + ", ".join(
+                    [f"{e}={indices[i]}" for i, e in enumerate(labels[i][3:])]
+                )
+                + ")"
+            )
+
+            row_idx, col_idx = sub_idx(i)
+            ax = axs[row_idx, col_idx]
+            im = ax.imshow(slice_, aspect="auto", **kw)
+            ax.set_xlabel(labels[i][1])
+            ax.set_ylabel(labels[i][2])
+            config(fig, ax, im, curr_title)
+
+        # buf = io.BytesIO()
+        # plt.savefig(buf, format=frame_format)
+        # buf.seek(0)
+        # frames.append(Image.open(buf))
+        fig.canvas.draw()
+        frame = Image.frombytes('RGB', fig.canvas.get_width_height(), fig.canvas.tostring_rgb())
+        frames.append(frame)
+
+        plt.clf()
+        fig, axs = plt.subplots(*subplot_shape)
+        fig.set_size_inches(*fig_size)
+        fig.tight_layout(**layout_args)
+        if( type(axs[0]) != np.ndarray):
+            axs = np.array([axs])
+            # fig.set_size_inches(18.5, 10.5)
+            # fig.tight_layout(pad=3.0)
+
+
+        if len(frames) % print_freq == 0:
+            full_time = time() - start_time
+            start_time = time()
+            printv(f"Processed {len(frames)} out of {N} slices...{full_time} s")
+
+    abs_path = os.path.abspath(path)
+    os.makedirs(abs_path, exist_ok=True)
+    name = name.replace(f".{movie_format}", "")
+    plot_name = os.path.join(abs_path, name) + f".{movie_format}"
+    printv(f"Creating GIF at {plot_name}...", end="")
+    frames[0].save(
+        plot_name,
+        format=movie_format.upper(),
+        append_images=frames[1:],
+        save_all=True,
+        duration=duration,
+        loop=0,
+    )
 
 
 def make_gifs(
