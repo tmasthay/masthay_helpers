@@ -559,16 +559,18 @@ def summarize_tensor(tensor, *, idt_level=0, idt_str="    ", heading="Tensor"):
         torch.uint8,
     ]:
         tensor = tensor.float()
-    stats.update({
-        'mean': torch.mean(tensor).item(),
-        'variance': torch.var(tensor).item(),
-        'median': torch.median(tensor).item(),
-        'min': torch.min(tensor).item(),
-        'max': torch.max(tensor).item(),
-        'stddev': torch.std(tensor).item(),
-        'RMS': torch.sqrt(torch.mean(tensor**2)).item(),
-        'L2': torch.norm(tensor).item(),
-    })
+    stats.update(
+        {
+            'mean': torch.mean(tensor).item(),
+            'variance': torch.var(tensor).item(),
+            'median': torch.median(tensor).item(),
+            'min': torch.min(tensor).item(),
+            'max': torch.max(tensor).item(),
+            'stddev': torch.std(tensor).item(),
+            'RMS': torch.sqrt(torch.mean(tensor**2)).item(),
+            'L2': torch.norm(tensor).item(),
+        }
+    )
 
     # Prepare the summary string with the desired indentation
     indent = idt_str * idt_level
@@ -822,16 +824,18 @@ def rich_tensor(
         torch.uint8,
     ]:
         tensor = tensor.float()
-    stats.update({
-        'mean': torch.mean(tensor).item(),
-        'variance': torch.var(tensor).item(),
-        'median': torch.median(tensor).item(),
-        'min': torch.min(tensor).item(),
-        'max': torch.max(tensor).item(),
-        'stddev': torch.std(tensor).item(),
-        'RMS': torch.sqrt(torch.mean(tensor**2)).item(),
-        'L2': torch.norm(tensor).item(),
-    })
+    stats.update(
+        {
+            'mean': torch.mean(tensor).item(),
+            'variance': torch.var(tensor).item(),
+            'median': torch.median(tensor).item(),
+            'min': torch.min(tensor).item(),
+            'max': torch.max(tensor).item(),
+            'stddev': torch.std(tensor).item(),
+            'RMS': torch.sqrt(torch.mean(tensor**2)).item(),
+            'L2': torch.norm(tensor).item(),
+        }
+    )
     d1 = {}
     for k, v in stats.items():
         if type(v) == float:
@@ -1097,6 +1101,16 @@ def hydra_kw(*, use_cfg=False, protect_kw=True):
         return wrapper
 
     return decorator
+
+
+def clean_kwargs(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        valid_keys = set(inspect.signature(func).parameters.keys())
+        filtered_kwargs = {k: v for k, v in kwargs.items() if k in valid_keys}
+        return func(*args, **filtered_kwargs)
+
+    return wrapper
 
 
 # def get_hydra_cfg(
