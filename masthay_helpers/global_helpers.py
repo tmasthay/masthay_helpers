@@ -1079,7 +1079,11 @@ def hydra_kw(*, use_cfg=False, protect_kw=True):
         ):
             if config_path is None or config_name is None:
                 cfg = {}
+                input(cfg)
             else:
+                config_path = os.path.relpath(
+                    config_path, os.path.dirname(__file__)
+                )
                 with initialize(
                     config_path=config_path, version_base=version_base
                 ) as cfg:
@@ -1088,6 +1092,7 @@ def hydra_kw(*, use_cfg=False, protect_kw=True):
                         overrides=overrides,
                         return_hydra_config=return_hydra_config,
                     )
+                    input(cfg)
             overlapping_keys = set(cfg.keys()).intersection(set(kw.keys()))
             for key in overlapping_keys:
                 kw[key] = cfg[key]
