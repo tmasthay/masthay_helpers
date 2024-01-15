@@ -1065,7 +1065,7 @@ def hydra_cfg(f):
     return wrapper
 
 
-def hydra_kw(*, use_cfg=False, protect_kw=True):
+def hydra_kw(*, use_cfg=False, protect_kw=True, mutable=True):
     def decorator(f):
         @wraps(f)
         def wrapper(
@@ -1092,13 +1092,15 @@ def hydra_kw(*, use_cfg=False, protect_kw=True):
                         overrides=overrides,
                         return_hydra_config=return_hydra_config,
                     )
-                    input(cfg)
+
             overlapping_keys = set(cfg.keys()).intersection(set(kw.keys()))
             for key in overlapping_keys:
                 kw[key] = cfg[key]
                 if protect_kw:
                     del cfg[key]
             if use_cfg:
+                if mutable:
+                    cfg = DotDict(cfg.__dict__['_content'])
                 return f(cfg, *args, **kw)
             else:
                 return f(*args, **kw)
