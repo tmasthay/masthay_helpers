@@ -1065,7 +1065,13 @@ def hydra_cfg(f):
     return wrapper
 
 
-def hydra_kw(*, use_cfg=False, protect_kw=True, mutable=True):
+def hydra_kw(*, use_cfg=False, protect_kw=True, transform_cfg=None):
+    if not use_cfg and transform_cfg:
+        UserWarning(
+            'use_cfg is False with non-null transform_cfg -> transform_cfg will'
+            ' be ignored'
+        )
+
     def decorator(f):
         @wraps(f)
         def wrapper(
@@ -1079,7 +1085,6 @@ def hydra_kw(*, use_cfg=False, protect_kw=True, mutable=True):
         ):
             if config_path is None or config_name is None:
                 cfg = {}
-                input(cfg)
             else:
                 config_path = os.path.relpath(
                     config_path, os.path.dirname(__file__)
@@ -1099,8 +1104,8 @@ def hydra_kw(*, use_cfg=False, protect_kw=True, mutable=True):
                 if protect_kw:
                     del cfg[key]
             if use_cfg:
-                if mutable:
-                    cfg = DotDict(cfg.__dict__['_content'])
+                if transform_cfg is not None:
+                    cfg = transform_cfg(cfg)
                 return f(cfg, *args, **kw)
             else:
                 return f(*args, **kw)
