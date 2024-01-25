@@ -534,8 +534,53 @@ def get_frames(
     return frames
 
 
+def get_frames_bool(
+    *,
+    data: ArrayLike,
+    iter: PlotTypes.Indices,
+    fig: Figure,
+    axes: List[Axes],
+    plotter: PlotTypes.PlotHandler,
+    framer: PlotTypes.PlotHandler = None,
+    **kw,
+):
+    frames = []
+
+    from time import time
+
+    if framer is None:
+
+        def default_frame_handler(*, data, idx, fig, axes, **kw2):
+            fig.canvas.draw()
+            frame = Image.frombytes(
+                'RGB',
+                fig.canvas.get_width_height(),
+                fig.canvas.tostring_rgb(),
+            )
+            return frame
+
+        frame_handler = default_frame_handler
+
+    curr_kw = kw
+    for idx, plot_frame in iter:
+        iter_time = time()
+        curr_kw = plotter(data=data, idx=idx, fig=fig, axes=axes, **curr_kw)
+        if plot_frame:
+            frames.append(
+                frame_handler(data=data, idx=idx, fig=fig, axes=axes, **kw)
+            )
+        iter_time = time() - iter_time
+        print(
+            f'idx={idx} took {iter_time:.2f} seconds:'
+            f' len(frames)=={len(frames)}',
+            flush=True,
+        )
+
+    return frames
+
+
 def save_frames(
-    frames, *, path, movie_format='gif', duration=100, verbose=False
+    frames, *, path, movie_format='gif', duration=100, verbose=False, loop=0
 ):
     dir, name = os.path.split(os.path.abspath(path))
     os.makedirs(dir, exist_ok=True)
@@ -549,7 +594,7 @@ def save_frames(
         append_images=frames[1:],
         save_all=True,
         duration=duration,
-        loop=0,
+        loop=loop,
     )
 
 
@@ -576,6 +621,15 @@ def slice_iter(*, dims, shape=None, arr=None, enum=True):
                 yield arr[idx]
 
     return generator()
+
+
+def slice_iter_bool(*, bool_gen, shape, dims):
+    indices = product(
+        *[[slice(None)] if i in dims else range(s) for i, s in enumerate(shape)]
+    )
+
+    for idx in indices:
+        yield idx, bool_gen(idx)
 
 
 def make_gifs(
