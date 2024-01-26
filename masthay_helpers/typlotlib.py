@@ -12,10 +12,20 @@ import glob
 import copy
 from time import time
 import torch
+from numpy.typing import ArrayLike
+from typing import Iterator, Any, List, Callable, Union
+from matplotlib.figure import Figure
+from matplotlib.axes import Axes
 
 # global pre_colors
 pre_colors = list(mcolors.CSS4_COLORS.keys())
 pre_colors_dict = mcolors.CSS4_COLORS
+
+
+class PlotTypes:
+    Index = Union[int, List[int]]
+    Indices = Union[Iterator[Index], List[Index]]
+    PlotHandler = Callable[[ArrayLike, Indices, Figure, List[Axes]], bool]
 
 
 def colors_str(*, colors, normalize=True, ncols=5, tablefmt="plain", **kw):
@@ -289,6 +299,7 @@ def plot_tensor2d_fast(
 
     frames = []  # list to store each frame in memory
     N = np.prod(tensor.shape[2:])
+    y_label, x_label = labels[0:2]
     labels = labels[2:]
     printv("DONE")
     # Iterate over all combinations of indices
@@ -306,6 +317,8 @@ def plot_tensor2d_fast(
 
         # Plot the slice
         plt.imshow(slice_, aspect="auto", **kw)
+        plt.xlabel(x_label)
+        plt.ylabel(y_label)
         config(curr_title)
 
         # Convert plot to PIL Image and append to frames
@@ -365,7 +378,7 @@ def plot_tensor2d_subplot(
     if type(tensor) != list:
         printv('Converting tensor to list')
         tensor = [e for e in tensor]
-    
+
     if type(tensor[0]) != torch.Tensor:
         printv('Converting tensor to torch.Tensor')
         tensor = [torch.from_numpy(e) for e in tensor]
@@ -378,7 +391,7 @@ def plot_tensor2d_subplot(
     loop_indices = np.array([e.shape[2:] for e in tensor])
     if len(np.where(loop_indices != loop_indices[0])[0]) > 0:
         raise ValueError(
-            'All dimensions except the first two must be the same for all'
+            f'All dimensions except the first two must be the same for all'
             f' tensors.'
         )
 
@@ -403,7 +416,10 @@ def plot_tensor2d_subplot(
     elif subplot_shape == 'vertical':
         subplot_shape = (len(tensor), 1)
 
-    fig, axs = plt.subplots(*subplot_shape)
+    if subplot_shape == (1, 1):
+        fig, axs = plt.subplots()
+    else:
+        fig, axs = plt.subplots(*subplot_shape)
     if type(axs) != np.ndarray:
         axs = np.array([axs])
     if type(axs[0]) != np.ndarray:
@@ -425,6 +441,7 @@ def plot_tensor2d_subplot(
     start_time = time()
     for indices in product(*dims):
         for i in range(len(tensor)):
+            print(f'{i}, {indices}', flush=True)
             slices = [slice(None), slice(None)] + list(indices)
             slice_ = tensor[i][slices]
 
@@ -485,6 +502,139 @@ def plot_tensor2d_subplot(
         duration=duration,
         loop=0,
     )
+
+
+def get_frames(
+    *,
+    data: ArrayLike,
+    iter: PlotTypes.Indices,
+    fig: Figure,
+    axes: List[Axes],
+    plotter: PlotTypes.PlotHandler,
+    framer: PlotTypes.PlotHandler = None,
+    **kw,
+):
+    frames = []
+
+    if framer is None:
+
+        def default_frame_handler(*, data, idx, fig, axes, **kw2):
+            fig.canvas.draw()
+            frame = Image.frombytes(
+                'RGB',
+                fig.canvas.get_width_height(),
+                fig.canvas.tostring_rgb(),
+            )
+            return frame
+
+        frame_handler = default_frame_handler
+
+    curr_kw = kw
+    for idx in iter:
+        curr_kw = plotter(data=data, idx=idx, fig=fig, axes=axes, **curr_kw)
+        frames.append(
+            frame_handler(data=data, idx=idx, fig=fig, axes=axes, **kw)
+        )
+
+    return frames
+
+
+def get_frames_bool(
+    *,
+    data: ArrayLike,
+    iter: PlotTypes.Indices,
+    fig: Figure,
+    axes: List[Axes],
+    plotter: PlotTypes.PlotHandler,
+    framer: PlotTypes.PlotHandler = None,
+    **kw,
+):
+    frames = []
+
+    from time import time
+
+    if framer is None:
+
+        def default_frame_handler(*, data, idx, fig, axes, **kw2):
+            fig.canvas.draw()
+            frame = Image.frombytes(
+                'RGB',
+                fig.canvas.get_width_height(),
+                fig.canvas.tostring_rgb(),
+            )
+            return frame
+
+        frame_handler = default_frame_handler
+
+    curr_kw = kw
+    for idx, plot_frame in iter:
+        iter_time = time()
+        curr_kw = plotter(data=data, idx=idx, fig=fig, axes=axes, **curr_kw)
+        if plot_frame:
+            frames.append(
+                frame_handler(data=data, idx=idx, fig=fig, axes=axes, **kw)
+            )
+        iter_time = time() - iter_time
+        print(
+            f'idx={idx} took {iter_time:.2f} seconds:'
+            f' len(frames)=={len(frames)}',
+            flush=True,
+        )
+
+    return frames
+
+
+def save_frames(
+    frames, *, path, movie_format='gif', duration=100, verbose=False, loop=0
+):
+    dir, name = os.path.split(os.path.abspath(path))
+    os.makedirs(dir, exist_ok=True)
+    name = name.replace(f".{movie_format}", "")
+    plot_name = f'{os.path.join(dir, name)}.{movie_format}'
+    if verbose:
+        print(f"Creating GIF at {plot_name} ...", end="")
+    frames[0].save(
+        plot_name,
+        format=movie_format.upper(),
+        append_images=frames[1:],
+        save_all=True,
+        duration=duration,
+        loop=loop,
+    )
+
+
+def slice_iter(*, dims, shape=None, arr=None, enum=True):
+    assert (shape is None) ^ (arr is None)
+    shape = shape or arr.shape
+    indices = product(
+        *[[slice(None)] if i in dims else range(s) for i, s in enumerate(shape)]
+    )
+
+    if arr is None:
+        return indices
+
+    if enum:
+
+        def generator():
+            for idx in indices:
+                yield (idx, arr[idx])
+
+    else:
+
+        def generator():
+            for idx in indices:
+                yield arr[idx]
+
+    return generator()
+
+
+def slice_iter_bool(*, bool_gen, shape, dims):
+    indices = product(
+        *[[slice(None)] if i in dims else range(s) for i, s in enumerate(shape)]
+    )
+
+    for idx in indices:
+        yield idx, bool_gen(idx)
 
 
 def make_gifs(
