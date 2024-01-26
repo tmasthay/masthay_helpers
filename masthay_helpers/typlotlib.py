@@ -11,6 +11,7 @@ from returns.curry import curry
 import glob
 import copy
 from time import time
+import torch
 
 # global pre_colors
 pre_colors = list(mcolors.CSS4_COLORS.keys())
@@ -364,9 +365,13 @@ def plot_tensor2d_subplot(
     if type(tensor) != list:
         printv('Converting tensor to list')
         tensor = [e for e in tensor]
+    
+    if type(tensor[0]) != torch.Tensor:
+        printv('Converting tensor to torch.Tensor')
+        tensor = [torch.from_numpy(e) for e in tensor]
 
     for i, e in enumerate(tensor):
-        while len(e.shape) <= 2:
+        while len(tensor[i].shape) <= 2:
             printv(f'Expanding tensor[{i}] to shape {e.shape + (1,)}')
             tensor[i] = tensor[i].unsqueeze(-1)
 
@@ -374,7 +379,7 @@ def plot_tensor2d_subplot(
     if len(np.where(loop_indices != loop_indices[0])[0]) > 0:
         raise ValueError(
             'All dimensions except the first two must be the same for all'
-            f' tensors. Got {set(loop_indices)}'
+            f' tensors.'
         )
 
     layout_args = layout_args or {}
