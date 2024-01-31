@@ -26,6 +26,10 @@ from hydra import initialize, compose
 from omegaconf.dictconfig import DictConfig
 from omegaconf.listconfig import ListConfig
 from omegaconf import AnyNode
+from hydra.core.global_hydra import GlobalHydra
+from hydra.utils import to_absolute_path, get_original_cwd
+from omegaconf import OmegaConf
+import copy
 
 
 class GlobalHelpers:
@@ -428,10 +432,14 @@ def call_vars(*, update=None, **kwargs_dummy):
 
 class DotDict:
     def __init__(self, d):
+        D = copy.deepcopy(d)
         if type(d) is DotDict:
             self.__dict__.update(d.__dict__)
         else:
-            self.__dict__.update(d)
+            for k, v in D.items():
+                if type(v) is dict:
+                    D[k] = DotDict(v)
+            self.__dict__.update(D)
 
     def set(self, k, v):
         self.__dict__[k] = v
@@ -479,7 +487,19 @@ class DotDict:
         self.__dict__.update(DotDict.get_dict(d))
 
     def str(self):
-        return format_with_black('DotDict(\n' + str(self.__dict__) + '\n)')
+        tmp_d = self.__dict__.copy()
+        for k, v in tmp_d.items():
+            if type(v) == torch.Tensor:
+                tmp_d[k] = {
+                    'type': 'torch.Tensor DotDict summary',
+                    'shape': v.shape,
+                    'dtype': v.dtype,
+                    'min': v.min().item(),
+                    'max': v.max().item(),
+                    'mean': v.mean().item(),
+                    'std': v.std().item(),
+                }
+        return format_with_black('DotDict(\n' + str(tmp_d) + '\n)')
 
     def dict(self):
         return self.__dict__
@@ -1259,3 +1279,68 @@ def convert_config_simplest(obj):
         return None
     else:
         return obj
+
+
+def easy_cfg(
+    config_path: str = 'cfg',
+    config_name: str = 'cfg.yaml',
+) -> DotDict:
+    cfg = OmegaConf.load(os.path.join(config_path, config_name))
+    return OmegaConf.to_container(cfg, resolve=True)
+
+
+def scan_for_conflicts(root: str):
+    """
+    Pre-scan the directory tree to ensure that there are no conflicts
+    between directory names and YAML file names (excluding the '.yaml' extension).
+    """
+    conflicts = []
+
+    def is_yaml(e):
+        return e.endswith('.yaml') or e.endswith('.yml')
+
+    def clean_yaml(e):
+        return e.replace('.yaml', '').replace('.yml', '')
+
+    for dirpath, dirnames, filenames in os.walk(root):
+        yaml_files = [clean_yaml(e) for e in filenames if is_yaml(e)]
+        conflicts = set(yaml_files).intersection(set(dirnames))
+        if conflicts:
+            raise ValueError(
+                f"Naming conflict(s) detected in directory {dirpath}:\n"
+                f"    {conflicts}"
+            )
+    return True
+
+
+def all_cfg(root: str = '.') -> dict:
+    scan_for_conflicts(root)
+
+    cfgs = {}
+
+    for dirpath, _, filenames in os.walk(root):
+        for filename in filenames:
+            if filename.endswith('.yaml'):
+                # Create a hierarchical index based on directory structure
+                relpath = os.path.relpath(dirpath, root)
+                relpath = '' if '.' == relpath else relpath
+                parts = [e for e in relpath.split(os.sep) if e != '']
+                parts = parts + [filename[:-5]]
+
+                # Load the YAML file into a dictionary
+                config_path = os.path.join(dirpath, filename)
+                cfg = OmegaConf.load(config_path)
+                cfg_dict = OmegaConf.to_container(cfg, resolve=True)
+
+                d = cfgs
+                for part in parts[:-1]:
+                    if part not in d:
+                        d[part] = {}
+                    d = d[part]
+                if parts[-1] in d:
+                    raise ValueError(
+                        f"Naming conflict for configuration: {parts[-1]}"
+                    )
+                d[parts[-1]] = cfg_dict
+
+    return cfgs
