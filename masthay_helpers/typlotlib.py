@@ -709,3 +709,49 @@ def make_gifs(
                 **v, config=config(labels=v['labels']), name=k, **kw
             )
         print('DONE')
+
+
+def apply_subplot(data, sub, i_subplot, i_overlay):
+    curr_subplot = sub.order[i_subplot - 1]
+    plt.subplot(*sub.shape, curr_subplot)
+    specs = sub.plts[curr_subplot - 1]
+    plot_type = specs.opts[i_overlay - 1].get('type', 'plot')
+    if plot_type == 'plot':
+        callback = plt.plot
+    elif plot_type == 'scatter':
+        callback = plt.scatter
+    elif plot_type == 'imshow':
+        callback = plt.imshow
+    elif plot_type == 'hist':
+        callback = plt.hist
+    elif plot_type == 'bar':
+        callback = plt.bar
+    else:
+        raise ValueError(f'Unknown plot_type: {plot_type}')
+
+    callback(
+        data.detach().cpu(),
+        **{k: v for k, v in specs.opts[i_overlay - 1].items() if k != 'type'},
+    )
+    if specs.get('xlabel', None) is not None:
+        plt.xlabel(specs.xlabel)
+    if specs.get('ylabel', None) is not None:
+        plt.ylabel(specs.ylabel)
+    if specs.get('ylim', None) is not None:
+        plt.ylim(specs.ylim)
+    if specs.get('xlim', None) is not None:
+        plt.xlim(specs.xlim)
+    if specs.get('legend', None) is not None:
+        plt.legend(**specs.legend)
+    if specs.get('grid', None) is not None:
+        plt.grid(**specs.grid)
+    if specs.get('colorbar', False):
+        plt.colorbar()
+    if specs.get('title', None) is not None:
+        plt.title(specs.title)
+    if specs.get('xticks', None) is not None:
+        plt.xticks(**specs.xticks)
+    if specs.get('yticks', None) is not None:
+        plt.yticks(**specs.yticks)
+    if specs.get('tight_layout', False):
+        plt.tight_layout()

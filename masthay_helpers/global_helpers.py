@@ -439,23 +439,34 @@ class DotDict:
             for k, v in D.items():
                 if type(v) is dict:
                     D[k] = DotDict(v)
+                elif type(v) is list:
+                    D[k] = [DotDict(e) if type(e) is dict else e for e in v]
             self.__dict__.update(D)
 
     def set(self, k, v):
         self.__dict__[k] = v
 
-    def get(self, k):
-        if type(k) != str:
-            raise ValueError(
-                f"Key must be a string. Got key={k} of type {type(k)}."
-            )
-        return getattr(self, k)
+    # This is legacy -- oversight that dictionary.get(x, 1) works differently lol
+    # def get(self, k):
+    #     if type(k) != str:
+    #         raise ValueError(
+    #             f"Key must be a string. Got key={k} of type {type(k)}."
+    #         )
+    #     return getattr(self, k)
+
+    def get(self, k, default_val=None):
+        return self.__dict__.get(k, default_val)
 
     def __setitem__(self, k, v):
         self.set(k, v)
 
     def __getitem__(self, k):
         return self.get(k)
+
+    def __setattr__(self, k, v):
+        if isinstance(v, dict):
+            v = DotDict(v)
+        self.__dict__[k] = v
 
     def getd(self, k, v):
         return self.__dict__.get(k, v)
@@ -496,8 +507,8 @@ class DotDict:
                     'dtype': v.dtype,
                     'min': v.min().item(),
                     'max': v.max().item(),
-                    'mean': v.mean().item(),
-                    'std': v.std().item(),
+                    'mean': v.float().mean().item(),
+                    'std': v.float().std().item(),
                 }
         return format_with_black('DotDict(\n' + str(tmp_d) + '\n)')
 
@@ -1279,6 +1290,10 @@ def convert_config_simplest(obj):
         return None
     else:
         return obj
+
+
+def convert_config_correct(obj):
+    return DotDict(OmegaConf.to_container(obj, resolve=True))
 
 
 def easy_cfg(
