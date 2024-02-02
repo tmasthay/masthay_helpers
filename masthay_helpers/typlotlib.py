@@ -711,7 +711,16 @@ def make_gifs(
         print('DONE')
 
 
-def apply_subplot(data, sub, i_subplot, i_overlay):
+def apply_subplot(
+    data,
+    sub,
+    i_subplot,
+    i_overlay,
+    *,
+    xlabel=("", ""),
+    ylabel=("", ""),
+    title=("", ""),
+):
     curr_subplot = sub.order[i_subplot - 1]
     plt.subplot(*sub.shape, curr_subplot)
     specs = sub.plts[curr_subplot - 1]
@@ -734,9 +743,9 @@ def apply_subplot(data, sub, i_subplot, i_overlay):
         **{k: v for k, v in specs.opts[i_overlay - 1].items() if k != 'type'},
     )
     if specs.get('xlabel', None) is not None:
-        plt.xlabel(specs.xlabel)
+        plt.xlabel(f"{xlabel[0]}{specs.xlabel}{xlabel[1]}")
     if specs.get('ylabel', None) is not None:
-        plt.ylabel(specs.ylabel)
+        plt.ylabel(f"{ylabel[0]}{specs.ylabel}{ylabel[1]}")
     if specs.get('ylim', None) is not None:
         plt.ylim(specs.ylim)
     if specs.get('xlim', None) is not None:
@@ -748,7 +757,7 @@ def apply_subplot(data, sub, i_subplot, i_overlay):
     if specs.get('colorbar', False):
         plt.colorbar()
     if specs.get('title', None) is not None:
-        plt.title(specs.title)
+        plt.title(f"{title[0]}{specs.title}{title[1]}")
     if specs.get('xticks', None) is not None:
         plt.xticks(**specs.xticks)
     if specs.get('yticks', None) is not None:
