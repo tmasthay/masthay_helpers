@@ -461,7 +461,7 @@ class DotDict:
         self.set(k, v)
 
     def __getitem__(self, k):
-        return self.get(k)
+        return self.__dict__[k]
 
     def __setattr__(self, k, v):
         if isinstance(v, dict):
@@ -521,12 +521,69 @@ class DotDict:
     def __repr__(self):
         return self.str()
 
+    def filter(self, exclude=None, include=None, relax=False):
+        return DotDict.filter_static(
+            self, exclude=exclude, include=include, relax=relax
+        )
+
+    def self_ref(self):
+        return DotDict.self_ref_eval(self)
+
+    def deep_get(self, keys):
+        curr = self
+        for k in keys:
+            curr = curr[k]
+        return curr
+
+    def deep_set(self, keys, val):
+        curr = self.deep_get(keys[:-1])
+        curr[keys[-1]] = val
+
     @staticmethod
     def get_dict(d):
         if isinstance(d, DotDict):
             return d.dict()
         else:
             return d
+
+    @staticmethod
+    def filter_static(d, exclude=None, include=None, relax=False):
+        keys = set(d.keys())
+        exclude = set() if exclude is None else set(exclude)
+        include = set(include) if include is None else keys
+        if not relax:
+            if not include.issubset(keys):
+                raise ValueError(
+                    f"include={include} contains keys not in d={keys}"
+                )
+            if not exclude.issubset(keys):
+                raise ValueError(
+                    f"exclude={exclude} contains keys not in d={keys}"
+                )
+        else:
+            include = include.intersection(keys)
+            exclude = exclude.intersection(include)
+        return DotDict({k: d.get(k) for k in include.difference(exclude)})
+
+    @staticmethod
+    def self_ref_eval(d):
+        # Certainly a more efficient way to do this with direct references
+        #     but performance is not a concern here.
+        def set_references(root):
+            refs = []
+            q = [('', root)]
+            while q:
+                prefix, e = q.pop()
+                for k, v in e.items():
+                    if isinstance(e[k], DotDict):
+                        q.append((f'{prefix}.{k}', e[k]))
+                    elif isinstance(v, str) and v[:5] == 'self.':
+                        mod_key = f'{prefix}.{k}'.split('.')[1:]
+                        val_key = v.split('.')[1:]
+                        root.deep_set(mod_key, root.deep_get(val_key))
+            return root
+
+        return set_references(d)
 
 
 def peel_final(x):
@@ -1208,91 +1265,91 @@ class LocalNamespace:
     }
 
 
-def convert_config(obj, list_protect="list_protect", dtype="identity"):
-    if isinstance(obj, DictConfig):
-        obj = DotDict(obj.__dict__["_content"])
-    elif isinstance(obj, dict):
-        obj = DotDict(obj)
+# def convert_config(obj, list_protect="list_protect", dtype="identity"):
+#     if isinstance(obj, DictConfig):
+#         obj = DotDict(obj.__dict__["_content"])
+#     elif isinstance(obj, dict):
+#         obj = DotDict(obj)
 
-    if isinstance(obj, DotDict):
-        if list(obj.keys()) == ["type", "value"]:
-            return LocalNamespace.types[obj["type"]](obj["value"]._value())
+#     if isinstance(obj, DotDict):
+#         if list(obj.keys()) == ["type", "value"]:
+#             return LocalNamespace.types[obj["type"]](obj["value"]._value())
 
-        if "default_type" not in obj.keys():
-            obj["default_type"] = dtype
-        else:
-            obj["default_type"] = LocalNamespace.types[obj["default_type"]]
+#         if "default_type" not in obj.keys():
+#             obj["default_type"] = dtype
+#         else:
+#             obj["default_type"] = LocalNamespace.types[obj["default_type"]]
 
-        for key, value in obj.items():
-            if isinstance(value, AnyNode):
-                input(f'value={value._value()}, type={type(value._value())}')
-                input(f'default_type={obj["default_type"]}')
-                obj[key] = obj["default_type"](value._value())
-            else:
-                input(f'value={value}, type={type(value)}')
+#         for key, value in obj.items():
+#             if isinstance(value, AnyNode):
+#                 input(f'value={value._value()}, type={type(value._value())}')
+#                 input(f'default_type={obj["default_type"]}')
+#                 obj[key] = obj["default_type"](value._value())
+#             else:
+#                 input(f'value={value}, type={type(value)}')
 
-        for key, value in obj.items():
-            if key != list_protect:
-                obj[key] = convert_config(value, list_protect)
-    elif isinstance(obj, list) or isinstance(obj, ListConfig):
-        if type(obj[0]) == str:
-            return np.array(obj[1:], dtype=LocalNamespace.types[obj[0]])
-        else:
-            return np.array(obj, dtype=dtype)
-    return obj
-
-
-def convert_config_simple(
-    obj, list_protect="list_protect", dtype=np.float32, arr_type=torch.tensor
-):
-    if isinstance(obj, DictConfig):
-        obj = DotDict(obj.__dict__["_content"])
-    elif isinstance(obj, dict):
-        obj = DotDict(obj)
-
-    if isinstance(obj, DotDict):
-        if list(obj.keys()) == ["type", "value"]:
-            return LocalNamespace.types[obj["type"]](obj["value"]._value())
-
-        for key, value in obj.items():
-            if isinstance(value, AnyNode):
-                obj[key] = value._value()
-
-        for key, value in obj.items():
-            if key != list_protect:
-                obj[key] = convert_config_simple(
-                    value, list_protect, dtype=dtype, arr_type=arr_type
-                )
-    elif isinstance(obj, list) or isinstance(obj, ListConfig):
-        if type(obj[0]) == str:
-            return arr_type(obj[1:], dtype=LocalNamespace.types[obj[0]])
-        else:
-            return arr_type(obj, dtype=dtype)
-    return obj
+#         for key, value in obj.items():
+#             if key != list_protect:
+#                 obj[key] = convert_config(value, list_protect)
+#     elif isinstance(obj, list) or isinstance(obj, ListConfig):
+#         if type(obj[0]) == str:
+#             return np.array(obj[1:], dtype=LocalNamespace.types[obj[0]])
+#         else:
+#             return np.array(obj, dtype=dtype)
+#     return obj
 
 
-def convert_config_simplest(obj):
-    if isinstance(obj, DictConfig):
-        return convert_config_simplest(DotDict(obj.__dict__["_content"]))
-    elif isinstance(obj, dict):
-        return convert_config_simplest(DotDict(obj))
-    elif isinstance(obj, AnyNode):
-        return obj._value()
-    elif isinstance(obj, ListConfig):
-        return convert_config_simplest(list(obj))
-    elif isinstance(obj, list):
-        return [convert_config_simplest(e) for e in obj]
-    elif isinstance(obj, DotDict):
-        for k, v in obj.items():
-            obj[k] = convert_config_simplest(v)
-        return obj
-    elif obj is None:
-        return None
-    else:
-        return obj
+# def convert_config_simple(
+#     obj, list_protect="list_protect", dtype=np.float32, arr_type=torch.tensor
+# ):
+#     if isinstance(obj, DictConfig):
+#         obj = DotDict(obj.__dict__["_content"])
+#     elif isinstance(obj, dict):
+#         obj = DotDict(obj)
+
+#     if isinstance(obj, DotDict):
+#         if list(obj.keys()) == ["type", "value"]:
+#             return LocalNamespace.types[obj["type"]](obj["value"]._value())
+
+#         for key, value in obj.items():
+#             if isinstance(value, AnyNode):
+#                 obj[key] = value._value()
+
+#         for key, value in obj.items():
+#             if key != list_protect:
+#                 obj[key] = convert_config_simple(
+#                     value, list_protect, dtype=dtype, arr_type=arr_type
+#                 )
+#     elif isinstance(obj, list) or isinstance(obj, ListConfig):
+#         if type(obj[0]) == str:
+#             return arr_type(obj[1:], dtype=LocalNamespace.types[obj[0]])
+#         else:
+#             return arr_type(obj, dtype=dtype)
+#     return obj
 
 
-def convert_config_correct(obj):
+# def convert_config_simplest(obj):
+#     if isinstance(obj, DictConfig):
+#         return convert_config_simplest(DotDict(obj.__dict__["_content"]))
+#     elif isinstance(obj, dict):
+#         return convert_config_simplest(DotDict(obj))
+#     elif isinstance(obj, AnyNode):
+#         return obj._value()
+#     elif isinstance(obj, ListConfig):
+#         return convert_config_simplest(list(obj))
+#     elif isinstance(obj, list):
+#         return [convert_config_simplest(e) for e in obj]
+#     elif isinstance(obj, DotDict):
+#         for k, v in obj.items():
+#             obj[k] = convert_config_simplest(v)
+#         return obj
+#     elif obj is None:
+#         return None
+#     else:
+#         return obj
+
+
+def convert_dictconfig(obj):
     return DotDict(OmegaConf.to_container(obj, resolve=True))
 
 
