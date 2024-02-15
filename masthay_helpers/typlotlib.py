@@ -720,6 +720,9 @@ def apply_subplot(
     xlabel=("", ""),
     ylabel=("", ""),
     title=("", ""),
+    ind_var=None,
+    xlim=None,
+    ylim=None,
 ):
     curr_subplot = sub.order[i_subplot - 1]
     plt.subplot(*sub.shape, curr_subplot)
@@ -738,26 +741,51 @@ def apply_subplot(
     else:
         raise ValueError(f'Unknown plot_type: {plot_type}')
 
-    callback(
-        data.detach().cpu(),
-        **{k: v for k, v in specs.opts[i_overlay - 1].items() if k != 'type'},
-    )
-    if specs.get('xlabel', None) is not None:
-        plt.xlabel(f"{xlabel[0]}{specs.xlabel}{xlabel[1]}")
-    if specs.get('ylabel', None) is not None:
-        plt.ylabel(f"{ylabel[0]}{specs.ylabel}{ylabel[1]}")
-    if specs.get('ylim', None) is not None:
-        plt.ylim(specs.ylim)
-    if specs.get('xlim', None) is not None:
-        plt.xlim(specs.xlim)
+    if ind_var is not None:
+        callback(
+            ind_var,
+            data.detach().cpu(),
+            **{
+                k: v
+                for k, v in specs.opts[i_overlay - 1].items()
+                if k != 'type'
+            },
+        )
+    else:
+        callback(
+            data.detach().cpu(),
+            **{
+                k: v
+                for k, v in specs.opts[i_overlay - 1].items()
+                if k != 'type'
+            },
+        )
+    xlabel_hat = specs.get('xlabel', '')
+    ylabel_hat = specs.get('ylabel', '')
+    title_hat = specs.get('title', '')
+    ylim_hat = specs.get('ylim', 'static')
+    xlim_hat = specs.get('xlim', 'static')
+    ylim_hat = ylim if ylim_hat == 'static' else ylim_hat
+    xlim_hat = xlim if xlim_hat == 'static' else xlim_hat
+    ylim_hat = None if ylim_hat == 'dynamic' else ylim_hat
+    xlim_hat = None if xlim_hat == 'dynamic' else xlim_hat
+
+    if xlabel is not None:
+        plt.xlabel(f"{xlabel[0]}{xlabel_hat}{xlabel[1]}")
+    if ylabel is not None:
+        plt.ylabel(f"{ylabel[0]}{ylabel_hat}{ylabel[1]}")
+    if ylim_hat:
+        plt.ylim(ylim_hat)
+    if xlim_hat:
+        plt.xlim(xlim_hat)
     if specs.get('legend', None) is not None:
         plt.legend(**specs.legend)
     if specs.get('grid', None) is not None:
         plt.grid(**specs.grid)
     if specs.get('colorbar', False):
         plt.colorbar()
-    if specs.get('title', None) is not None:
-        plt.title(f"{title[0]}{specs.title}{title[1]}")
+    if title is not None:
+        plt.title(f"{title[0]}{title_hat}{title[1]}")
     if specs.get('xticks', None) is not None:
         plt.xticks(**specs.xticks)
     if specs.get('yticks', None) is not None:
