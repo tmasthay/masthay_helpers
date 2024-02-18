@@ -431,37 +431,34 @@ def call_vars(*, update=None, **kwargs_dummy):
 
 
 class DotDict:
-    def __init__(self, d):
+    def __init__(self, d, self_ref_resolve=True):
         D = copy.deepcopy(d)
         if type(d) is DotDict:
             self.__dict__.update(d.__dict__)
         else:
             for k, v in D.items():
                 if type(v) is dict:
-                    D[k] = DotDict(v)
+                    D[k] = DotDict(v, self_ref_resolve=False)
                 elif type(v) is list:
-                    D[k] = [DotDict(e) if type(e) is dict else e for e in v]
+                    D[k] = [DotDict(e, self_ref_resolve=False) if type(e) is dict else e for e in v]
             self.__dict__.update(D)
+        if self_ref_resolve:
+            self.self_ref_resolve()
 
     def set(self, k, v):
-        self.__dict__[k] = v
-
-    # This is legacy -- oversight that dictionary.get(x, 1) works differently lol
-    # def get(self, k):
-    #     if type(k) != str:
-    #         raise ValueError(
-    #             f"Key must be a string. Got key={k} of type {type(k)}."
-    #         )
-    #     return getattr(self, k)
+        self.deep_set(k, v)
 
     def get(self, k, default_val=None):
-        return self.__dict__.get(k, default_val)
+        try:
+            return self.deep_get(k)
+        except KeyError:
+            return default_val
 
     def __setitem__(self, k, v):
-        self.set(k, v)
+        self.deep_set(k, v)
 
     def __getitem__(self, k):
-        return self.__dict__[k]
+        return self.deep_get(k)
 
     def __setattr__(self, k, v):
         if isinstance(v, dict):
@@ -483,34 +480,11 @@ class DotDict:
     def values(self):
         return self.__dict__.values()
 
-    def has(self, k):
-        return hasattr(self, k)
-
-    def has_all(self, *keys):
-        return all([self.has(k) for k in keys])
-
-    def has_all_type(self, *keys, lcl_type=None):
-        return all(
-            [self.has(k) and type(self.get(k)) is lcl_type for k in keys]
-        )
-
     def update(self, d):
         self.__dict__.update(DotDict.get_dict(d))
 
     def str(self):
-        tmp_d = self.__dict__.copy()
-        for k, v in tmp_d.items():
-            if type(v) == torch.Tensor:
-                tmp_d[k] = {
-                    'type': 'torch.Tensor DotDict summary',
-                    'shape': v.shape,
-                    'dtype': v.dtype,
-                    'min': v.min().item(),
-                    'max': v.max().item(),
-                    'mean': v.float().mean().item(),
-                    'std': v.float().std().item(),
-                }
-        return format_with_black('DotDict(\n' + str(tmp_d) + '\n)')
+        return str(self.__dict__)
 
     def dict(self):
         return self.__dict__
@@ -521,34 +495,64 @@ class DotDict:
     def __repr__(self):
         return self.str()
 
+    def deep_get(self, k):
+        d = self.__dict__
+        keys = k.split('.')
+        for key in keys:
+            d = d[key]
+        return d
+
+    def deep_set(self, k, v):
+        d = self.__dict__
+        keys = k.split('.')
+        for key in keys[:-1]:
+            try:
+                d = d[key]
+            except KeyError:
+                d[key] = DotDict({})
+                d = d[key]
+        d[keys[-1]] = v
+
+    def has_self_ref(self):
+        d = self.__dict__
+        q = [d]
+        while q:
+            d = q.pop()
+            for k, v in d.items():
+                if isinstance(v, DotDict):
+                    q.append(v)
+                elif isinstance(v, dict):
+                    q.append(v)
+                elif isinstance(v, str):
+                    if 'self' in v:
+                        return True
+        return False
+
+    def self_ref_resolve(self, max_passes=10):
+        passes = 0
+        while passes < max_passes and self.has_self_ref():
+            d = self.__dict__
+            q = [d]
+            while q:
+                d = q.pop()
+                for k, v in d.items():
+                    if isinstance(v, DotDict):
+                        q.append(v)
+                    elif isinstance(v, dict):
+                        d[k] = DotDict(v)
+                        q.append(d[k])
+                    elif isinstance(v, str):
+                        if 'self' in v:
+                            d[k] = eval(v)
+            passes += 1
+        if passes == max_passes:
+            raise ValueError(
+                f"Max passes ({max_passes}) reached. self_ref_resolve failed"
+            )
+        return self
+
     def filter(self, exclude=None, include=None, relax=False):
-        return DotDict.filter_static(
-            self, exclude=exclude, include=include, relax=relax
-        )
-
-    def self_ref(self):
-        return DotDict.self_ref_eval(self)
-
-    def deep_get(self, keys):
-        curr = self
-        for k in keys:
-            curr = curr[k]
-        return curr
-
-    def deep_set(self, keys, val):
-        curr = self.deep_get(keys[:-1])
-        curr[keys[-1]] = val
-
-    @staticmethod
-    def get_dict(d):
-        if isinstance(d, DotDict):
-            return d.dict()
-        else:
-            return d
-
-    @staticmethod
-    def filter_static(d, exclude=None, include=None, relax=False):
-        keys = set(d.keys())
+        keys = set(self.keys())
         exclude = set() if exclude is None else set(exclude)
         include = keys if include is None else set(include)
         if not relax:
@@ -558,35 +562,15 @@ class DotDict:
                 )
             if not exclude.issubset(keys):
                 raise ValueError(
-                    f"exclude={exclude} contains keys not in d={keys}"
+                    f"exclude={exclude} contains keys not in d={keys}...use relax=True to ignore this error"
                 )
-            return DotDict({k: d[k] for k in include.difference(exclude)})
+            return DotDict({k: self[k] for k in include.difference(exclude)})
         else:
             include = include.intersection(keys)
             exclude = exclude.intersection(include)
             return DotDict(
-                {k: d.get(k, None) for k in include.difference(exclude)}
+                {k: self.get(k, None) for k in include.difference(exclude)}
             )
-
-    @staticmethod
-    def self_ref_eval(d):
-        # Certainly a more efficient way to do this with direct references
-        #     but performance is not a concern here.
-        def set_references(root):
-            refs = []
-            q = [('', root)]
-            while q:
-                prefix, e = q.pop()
-                for k, v in e.items():
-                    if isinstance(e[k], DotDict):
-                        q.append((f'{prefix}.{k}', e[k]))
-                    elif isinstance(v, str) and v[:5] == 'self.':
-                        mod_key = f'{prefix}.{k}'.split('.')[1:]
-                        val_key = v.split('.')[1:]
-                        root.deep_set(mod_key, root.deep_get(val_key))
-            return root
-
-        return set_references(d)
 
 
 def peel_final(x):

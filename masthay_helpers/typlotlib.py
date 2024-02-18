@@ -710,8 +710,8 @@ def make_gifs(
             )
         print('DONE')
 
-
-def apply_subplot(
+@curry
+def apply_subplot_legacy(
     data,
     sub,
     i_subplot,
@@ -744,7 +744,7 @@ def apply_subplot(
     if ind_var is not None:
         callback(
             ind_var,
-            data.detach().cpu(),
+            data if type(data) != torch.Tensor else data.detach().cpu(),
             **{
                 k: v
                 for k, v in specs.opts[i_overlay - 1].items()
@@ -753,7 +753,7 @@ def apply_subplot(
         )
     else:
         callback(
-            data.detach().cpu(),
+            data if type(data) != torch.Tensor else data.detach().cpu(),
             **{
                 k: v
                 for k, v in specs.opts[i_overlay - 1].items()
@@ -777,6 +777,86 @@ def apply_subplot(
     if ylim_hat:
         plt.ylim(ylim_hat)
     if xlim_hat:
+        plt.xlim(xlim_hat)
+    if specs.get('legend', None) is not None:
+        plt.legend(**specs.legend)
+    if specs.get('grid', None) is not None:
+        plt.grid(**specs.grid)
+    if specs.get('colorbar', False):
+        plt.colorbar()
+    if title is not None:
+        plt.title(f"{title[0]}{title_hat}{title[1]}")
+    if specs.get('xticks', None) is not None:
+        plt.xticks(**specs.xticks)
+    if specs.get('yticks', None) is not None:
+        plt.yticks(**specs.yticks)
+    if specs.get('tight_layout', False):
+        plt.tight_layout()
+
+@curry
+def apply_subplot(
+    *
+    data,
+    sub,
+    name,
+    layer,
+    idx=None,
+    xlabel=("", ""),
+    ylabel=("", ""),
+    title=("", ""),
+    ind_var=None,
+    xlim=None,
+    ylim=None,
+):
+    specs = sub.plts[name]
+    opts = specs.opts[layer]
+
+    order = sub.get('order', list(sub.plts.keys()))
+    specs_idx = order.index(name)
+
+    plt.subplot(*sub.shape, specs_idx)
+    plot_type = opts.get('type', 'plot')
+    opts = {k: v for k,v in opts.items() if k != 'type'}
+    if plot_type == 'plot':
+        callback = plt.plot
+    elif plot_type == 'scatter':
+        callback = plt.scatter
+    elif plot_type == 'imshow':
+        callback = plt.imshow
+    elif plot_type == 'hist':
+        callback = plt.hist
+    elif plot_type == 'bar':
+        callback = plt.bar
+    else:
+        raise ValueError(f'Unknown plot_type: {plot_type}')
+
+    idx = slice(None) if idx in [None, 'all', ':'] else idx
+    data_slice = data[idx]
+    data_slice = data_slice if type(data_slice) != torch.Tensor else data_slice.detach().cpu()
+    if ind_var is not None:
+        callback(
+            ind_var,
+            data,
+            **opts
+        )
+    else:
+        callback(
+            data,
+            **opts
+        )
+
+    if ylim is None:
+        ylim = specs.get('ylim', 'static')
+        if ylim == 'static':
+            ylim = (data.min(), data.max())
+    
+    if xlabel is not None:
+        plt.xlabel(f"{xlabel[0]}{xlabel_hat}{xlabel[1]}")
+    if ylabel is not None:
+        plt.ylabel(f"{ylabel[0]}{ylabel_hat}{ylabel[1]}")
+    if ylim not in [None, 'dynamic']:
+        plt.ylim(ylim_hat)
+    if xlim:
         plt.xlim(xlim_hat)
     if specs.get('legend', None) is not None:
         plt.legend(**specs.legend)
