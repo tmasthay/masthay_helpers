@@ -431,7 +431,7 @@ def call_vars(*, update=None, **kwargs_dummy):
 
 
 class DotDict:
-    def __init__(self, d, self_ref_resolve=True):
+    def __init__(self, d, self_ref_resolve=False):
         D = copy.deepcopy(d)
         if type(d) is DotDict:
             self.__dict__.update(d.__dict__)
@@ -440,7 +440,14 @@ class DotDict:
                 if type(v) is dict:
                     D[k] = DotDict(v, self_ref_resolve=False)
                 elif type(v) is list:
-                    D[k] = [DotDict(e, self_ref_resolve=False) if type(e) is dict else e for e in v]
+                    D[k] = [
+                        (
+                            DotDict(e, self_ref_resolve=False)
+                            if type(e) is dict
+                            else e
+                        )
+                        for e in v
+                    ]
             self.__dict__.update(D)
         if self_ref_resolve:
             self.self_ref_resolve()
@@ -524,11 +531,13 @@ class DotDict:
                 elif isinstance(v, dict):
                     q.append(v)
                 elif isinstance(v, str):
-                    if 'self' in v:
+                    if 'self' in v or 'eval(' in v:
                         return True
         return False
 
-    def self_ref_resolve(self, max_passes=10):
+    def self_ref_resolve(self, max_passes=10, glb=None, lcl=None):
+        lcl.update(locals())
+        glb.update(globals())
         passes = 0
         while passes < max_passes and self.has_self_ref():
             d = self.__dict__
@@ -543,7 +552,9 @@ class DotDict:
                         q.append(d[k])
                     elif isinstance(v, str):
                         if 'self' in v:
-                            d[k] = eval(v)
+                            d[k] = eval(v, glb, lcl)
+                        elif 'eval(' in v:
+                            d[k] = eval(v[5:-1], glb, lcl)
             passes += 1
         if passes == max_passes:
             raise ValueError(
@@ -562,7 +573,8 @@ class DotDict:
                 )
             if not exclude.issubset(keys):
                 raise ValueError(
-                    f"exclude={exclude} contains keys not in d={keys}...use relax=True to ignore this error"
+                    f"exclude={exclude} contains keys not in d={keys}...use"
+                    " relax=True to ignore this error"
                 )
             return DotDict({k: self[k] for k in include.difference(exclude)})
         else:
@@ -1252,8 +1264,8 @@ class LocalNamespace:
     }
 
 
-def convert_dictconfig(obj):
-    return DotDict(OmegaConf.to_container(obj, resolve=True))
+def convert_dictconfig(obj, self_ref_resolve=False):
+    return DotDict(OmegaConf.to_container(obj, resolve=True), self_ref_resolve=self_ref_resolve)
 
 
 def easy_cfg(
@@ -1319,3 +1331,52 @@ def all_cfg(root: str = '.') -> dict:
                 d[parts[-1]] = cfg_dict
 
     return cfgs
+
+
+def dyn_import(*, path, mod, func=None):
+    if not path.startswith('/'):
+        path = os.path.join(os.getcwd(), path)
+    if not path.endswith('.py'):
+        path = os.path.join(path, f'{mod}.py')
+
+    spec = importlib.util.spec_from_file_location(mod, path)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[mod] = module
+    spec.loader.exec_module(module)
+    obj = module
+    if func is not None:
+        obj = getattr(module, func)
+    return obj
+
+
+def cfg_import(s, *, root=None, delim='|'):
+    info = s.split(delim)
+    root = root or os.getcwd()
+    if len(info) == 1:
+        path, mod, func = root, info[0], None
+    elif len(info) == 2:
+        path, mod, func = root, info[0], info[1]
+    else:
+        path, mod, func = info
+
+    if func is not None and func.lower() in ['none', 'null', '']:
+        func = None
+
+    path = os.path.abspath(path)
+    return dyn_import(path=path, mod=mod, func=func)
+
+
+def exec_imports(d: DotDict, *, root=None, delim='|', import_key='dimport'):
+    q = [('', d)]
+    root = root or Paths.path
+    while q:
+        prefix, curr = q.pop(0)
+        for k, v in curr.items():
+            if isinstance(v, DotDict) or isinstance(v, dict):
+                q.append((f'{prefix}.{k}' if prefix else k, v))
+            elif isinstance(v, list) and len(v) > 0 and v[0] == import_key:
+                lcl_root = os.path.join(root, *prefix.split('.'))
+                d[f'{prefix}.{k}'] = cfg_import(
+                    v[1], root=lcl_root, delim=delim
+                )
+    return d
