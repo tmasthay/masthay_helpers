@@ -1,3 +1,12 @@
+"""
+The purpose of this file was so that I could curry built-in functions, which
+is not possible with the returns.curry.curry function. This is because the
+returns.curry.curry function uses the inspect.signature function, which does
+not work with built-in functions. This file is a workaround for that problem.
+It will deprecated since this is not a super useful feature, but will be kept
+in version control for posterity in case I need it again.
+"""
+
 import re
 import types
 
