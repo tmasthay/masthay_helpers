@@ -521,9 +521,7 @@ def get_frames(
         def default_frame_handler(*, data, idx, fig, axes, **kw2):
             fig.canvas.draw()
             frame = Image.frombytes(
-                'RGB',
-                fig.canvas.get_width_height(),
-                fig.canvas.tostring_rgb(),
+                'RGB', fig.canvas.get_width_height(), fig.canvas.tostring_rgb()
             )
             return frame
 
@@ -558,9 +556,7 @@ def get_frames_bool(
         def default_frame_handler(*, data, idx, fig, axes, **kw2):
             fig.canvas.draw()
             frame = Image.frombytes(
-                'RGB',
-                fig.canvas.get_width_height(),
-                fig.canvas.tostring_rgb(),
+                'RGB', fig.canvas.get_width_height(), fig.canvas.tostring_rgb()
             )
             return frame
 
@@ -710,6 +706,7 @@ def make_gifs(
             )
         print('DONE')
 
+
 @curry
 def apply_subplot_legacy(
     data,
@@ -793,10 +790,10 @@ def apply_subplot_legacy(
     if specs.get('tight_layout', False):
         plt.tight_layout()
 
+
 @curry
 def apply_subplot(
-    *
-    data,
+    *data,
     sub,
     name,
     layer,
@@ -816,7 +813,7 @@ def apply_subplot(
 
     plt.subplot(*sub.shape, specs_idx)
     plot_type = opts.get('type', 'plot')
-    opts = {k: v for k,v in opts.items() if k != 'type'}
+    opts = {k: v for k, v in opts.items() if k != 'type'}
     if plot_type == 'plot':
         callback = plt.plot
     elif plot_type == 'scatter':
@@ -832,24 +829,21 @@ def apply_subplot(
 
     idx = slice(None) if idx in [None, 'all', ':'] else idx
     data_slice = data[idx]
-    data_slice = data_slice if type(data_slice) != torch.Tensor else data_slice.detach().cpu()
+    data_slice = (
+        data_slice
+        if type(data_slice) != torch.Tensor
+        else data_slice.detach().cpu()
+    )
     if ind_var is not None:
-        callback(
-            ind_var,
-            data,
-            **opts
-        )
+        callback(ind_var, data, **opts)
     else:
-        callback(
-            data,
-            **opts
-        )
+        callback(data, **opts)
 
     if ylim is None:
         ylim = specs.get('ylim', 'static')
         if ylim == 'static':
             ylim = (data.min(), data.max())
-    
+
     if xlabel is not None:
         plt.xlabel(f"{xlabel[0]}{xlabel_hat}{xlabel[1]}")
     if ylabel is not None:
