@@ -1,7 +1,7 @@
 # from Experiments.helpers.import_env import *
 import os
 import sys
-from masthay_helpers.import_env import *
+from mh.import_env import init_modules
 
 include_paths = ["masthay_helpers"]
 
