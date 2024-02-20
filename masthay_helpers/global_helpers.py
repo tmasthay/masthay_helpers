@@ -9,6 +9,7 @@ from fnmatch import fnmatch
 from functools import wraps
 from itertools import product
 from subprocess import check_output as co
+from typing import Callable
 
 import black
 import numpy as np
@@ -30,6 +31,7 @@ from hydra.core.global_hydra import GlobalHydra
 from hydra.utils import to_absolute_path, get_original_cwd
 from omegaconf import OmegaConf
 import copy
+import importlib
 
 
 class GlobalHelpers:
@@ -1368,7 +1370,7 @@ def cfg_import(s, *, root=None, delim='|'):
 
 def exec_imports(d: DotDict, *, root=None, delim='|', import_key='dimport'):
     q = [('', d)]
-    root = root or Paths.path
+    root = root or os.getcwd()
     while q:
         prefix, curr = q.pop(0)
         for k, v in curr.items():
@@ -1380,3 +1382,7 @@ def exec_imports(d: DotDict, *, root=None, delim='|', import_key='dimport'):
                     v[1], root=lcl_root, delim=delim
                 )
     return d
+
+def hydra_out(name: str='') -> str:
+    out = hydra.core.hydra_config.HydraConfig.get().runtime.output_dir
+    return os.path.join(out, name)
