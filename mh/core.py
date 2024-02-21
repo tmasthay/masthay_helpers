@@ -280,6 +280,13 @@ def flip_dict(d):
         raise e
     return u
 
+def get_print(*, _verbose):
+    def print_fn(*args, verbose=1, **kw):
+        if verbose <= _verbose:
+            kw["flush"] = kw.get("flush", True)
+            print(*args, **kw)
+
+    return print_fn, print_fn
 
 def hydra_kw(*, use_cfg=False, protect_kw=True, transform_cfg=None):
     if not use_cfg and transform_cfg:
