@@ -424,8 +424,9 @@ def apply_subplot_legacy(
 
 @curry
 def apply_subplot(
-    *data,
-    sub,
+    *,
+    data,
+    cfg,
     name,
     layer,
     idx=None,
@@ -436,13 +437,13 @@ def apply_subplot(
     xlim=None,
     ylim=None,
 ):
-    specs = sub.plts[name]
-    opts = specs.opts[layer]
+    specs = cfg.plts[name]
+    lyr = specs[layer]
+    opts = lyr.get('opts', {})
 
-    order = sub.get('order', list(sub.plts.keys()))
-    specs_idx = order.index(name)
-
-    plt.subplot(*sub.shape, specs_idx)
+    order = cfg.get('order', list(cfg.plts.keys()))
+    specs_idx = order.index(name) + 1
+    plt.subplot(*cfg.sub.shape, specs_idx)
     plot_type = opts.get('type', 'plot')
     opts = {k: v for k, v in opts.items() if k != 'type'}
     if plot_type == 'plot':
@@ -460,37 +461,27 @@ def apply_subplot(
 
     idx = slice(None) if idx in [None, 'all', ':'] else idx
     data_slice = data[idx]
-    data_slice = (
-        data_slice
-        if type(data_slice) != torch.Tensor
-        else data_slice.detach().cpu()
-    )
     if ind_var is not None:
-        callback(ind_var, data, **opts)
+        callback(ind_var, data_slice, **opts)
     else:
-        callback(data, **opts)
+        callback(data_slice, **opts)
 
-    if ylim is None:
-        ylim = specs.get('ylim', 'static')
-        if ylim == 'static':
-            ylim = (data.min(), data.max())
-
-    if xlabel is not None:
-        plt.xlabel(f"{xlabel[0]}{xlabel_hat}{xlabel[1]}")
-    if ylabel is not None:
-        plt.ylabel(f"{ylabel[0]}{ylabel_hat}{ylabel[1]}")
+    if lyr.get('xlabel', None) is not None:
+        plt.xlabel(f"{xlabel[0]}{lyr.xlabel}{xlabel[1]}")
+    if lyr.get('ylabel', None) is not None:
+        plt.ylabel(f"{ylabel[0]}{lyr.ylabel}{ylabel[1]}")
     if ylim not in [None, 'dynamic']:
-        plt.ylim(ylim_hat)
+        plt.ylim(ylim)
     if xlim:
-        plt.xlim(xlim_hat)
+        plt.xlim(xlim)
     if specs.get('legend', None) is not None:
         plt.legend(**specs.legend)
     if specs.get('grid', None) is not None:
         plt.grid(**specs.grid)
     if specs.get('colorbar', False):
         plt.colorbar()
-    if title is not None:
-        plt.title(f"{title[0]}{title_hat}{title[1]}")
+    if lyr.get('title', None) is not None:
+        plt.title(f"{title[0]}{lyr.title}{title[1]}")
     if specs.get('xticks', None) is not None:
         plt.xticks(**specs.xticks)
     if specs.get('yticks', None) is not None:
