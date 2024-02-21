@@ -1,10 +1,10 @@
 __all__ = [
-    "typlotlib",
-    "jupyter",
     "core",
-    "import_env"
+    "import_env",
+    "typlotlib",
+    "jupyter"
 ]
-from .typlotlib import *
-from .jupyter import *
 from .core import *
 from .import_env import *
+from .typlotlib import *
+from .jupyter import *
