@@ -1,6 +1,7 @@
 import re
-from gitlint.rules import CommitRule, RuleViolation
 from dataclasses import dataclass
+
+from gitlint.rules import CommitRule, RuleViolation
 
 
 @dataclass

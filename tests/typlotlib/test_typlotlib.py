@@ -1,5 +1,7 @@
-from hypothesis import given, strategies as st
 import torch
+from hypothesis import given
+from hypothesis import strategies as st
+
 from masthay_helpers.typlotlib import plot_tensor2d_subplot
 
 

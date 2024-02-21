@@ -1,15 +1,10 @@
-black>=23.9.1
-black-nb>=0.7
 holoviews>=1.17.1
 hvplot>=0.8.4
-masthay-helpers>=0.2.86
+hydra-core>=1.1.0
 matplotlib>=3.7.2
 matplotlib-inline>=0.1.6
 numpy>=1.25.2
 pandas>=2.1.1
 panel>=1.2.3
 returns>=0.22.0
-setuptools>=68.0.0
-tabulate>=0.9.0
-termcolor>=2.3.0
-torch>=2.0.1
+tabulate>=0.8.9

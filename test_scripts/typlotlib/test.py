@@ -1,6 +1,8 @@
-from masthay_helpers.typlotlib import *
-import matplotlib.pyplot as plt
 import os
+
+import matplotlib.pyplot as plt
+
+from masthay_helpers.typlotlib import *
 
 # Create a figure
 setup_gg_plot(clr_out="black", clr_in="black", figsize=(10, 10))

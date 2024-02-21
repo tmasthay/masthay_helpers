@@ -1,6 +1,7 @@
-from masthay_helpers.global_helpers import hydra_kw
-import pytest
 import hydra
+import pytest
+
+from masthay_helpers.global_helpers import hydra_kw
 
 with hydra.initialize(config_path='config', version_base=None):
     cfg = hydra.compose(config_name='config')

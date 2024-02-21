@@ -1,19 +1,9 @@
-import pandas as pd
-import panel as pn
 import holoviews as hv
-import numpy as np
-import torch
-from .global_helpers import (
-    filter_kw,
-    pandify,
-    depandify,
-    get_full_slices,
-    call_vars,
-)
-import copy
-import importlib
 import matplotlib.pyplot as plt
+import panel as pn
 from returns.curry import curry
+
+from .global_helpers import depandify, pandify
 
 
 def get_axes(slices):

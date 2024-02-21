@@ -1,5 +1,6 @@
-from masthay_helpers.typlotlib import *
 import torch
+
+from masthay_helpers.typlotlib import *
 
 
 def main():

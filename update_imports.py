@@ -1,9 +1,10 @@
 # from Experiments.helpers.import_env import *
 import os
 import sys
+
 from mh.import_env import init_modules
 
-include_paths = ["masthay_helpers"]
+include_paths = ["mh"]
 
 # run_make_files(omissions)
 
