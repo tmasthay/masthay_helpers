@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import panel as pn
 from returns.curry import curry
 
-from .global_helpers import depandify, pandify
+from .core import depandify, pandify
 
 
 def get_axes(slices):
