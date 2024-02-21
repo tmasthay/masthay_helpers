@@ -474,17 +474,17 @@ def apply_subplot(
         plt.ylim(ylim)
     if xlim:
         plt.xlim(xlim)
-    if specs.get('legend', None) is not None:
-        plt.legend(**specs.legend)
-    if specs.get('grid', None) is not None:
-        plt.grid(**specs.grid)
-    if specs.get('colorbar', False):
+    if lyr.get('legend', None) is not None:
+        plt.legend(**lyr.legend)
+    if lyr.get('grid', None) is not None:
+        plt.grid(**lyr.grid)
+    if lyr.get('colorbar', False):
         plt.colorbar()
     if lyr.get('title', None) is not None:
         plt.title(f"{title[0]}{lyr.title}{title[1]}")
-    if specs.get('xticks', None) is not None:
-        plt.xticks(**specs.xticks)
-    if specs.get('yticks', None) is not None:
+    if lyr.get('xticks', None) is not None:
+        plt.xticks(**lyr.xticks)
+    if lyr.get('yticks', None) is not None:
         plt.yticks(**specs.yticks)
     if specs.get('tight_layout', False):
         plt.tight_layout()
