@@ -444,20 +444,20 @@ def apply_subplot(
     order = cfg.get('order', list(cfg.plts.keys()))
     specs_idx = order.index(name) + 1
     plt.subplot(*cfg.sub.shape, specs_idx)
-    plot_type = opts.get('type', 'plot')
-    opts = {k: v for k, v in opts.items() if k != 'type'}
-    if plot_type == 'plot':
+
+    lyr.type = lyr.get('type', 'plot')
+    if lyr.type == 'plot':
         callback = plt.plot
-    elif plot_type == 'scatter':
+    elif lyr.type == 'scatter':
         callback = plt.scatter
-    elif plot_type == 'imshow':
+    elif lyr.type == 'imshow':
         callback = plt.imshow
-    elif plot_type == 'hist':
+    elif lyr.type == 'hist':
         callback = plt.hist
-    elif plot_type == 'bar':
+    elif lyr.type == 'bar':
         callback = plt.bar
     else:
-        raise ValueError(f'Unknown plot_type: {plot_type}')
+        raise ValueError(f'Unknown plot_type: {specs.type}')
 
     idx = slice(None) if idx in [None, 'all', ':'] else idx
     data_slice = data[idx]

@@ -114,6 +114,8 @@ class DotDict:
         return False
 
     def self_ref_resolve(self, max_passes=10, glb=None, lcl=None):
+        lcl = lcl or {}
+        glb = glb or {}
         lcl.update(locals())
         glb.update(globals())
         passes = 0
@@ -172,6 +174,8 @@ def cfg_import(s, *, root=None, delim='|'):
         path, mod, func = root, info[0], info[1]
     else:
         path, mod, func = info
+        if path.lower() == "cwd":
+            path = os.getcwd()
 
     if func is not None and func.lower() in ['none', 'null', '']:
         func = None
@@ -251,7 +255,7 @@ def easy_cfg(
     return OmegaConf.to_container(cfg, resolve=True)
 
 
-def exec_imports(d: DotDict, *, root=None, delim='|', import_key='dimport'):
+def exec_imports(d: DotDict, *, root=None, delim='|', import_key='^^'):
     q = [('', d)]
     root = root or os.getcwd()
     while q:
@@ -259,10 +263,11 @@ def exec_imports(d: DotDict, *, root=None, delim='|', import_key='dimport'):
         for k, v in curr.items():
             if isinstance(v, DotDict) or isinstance(v, dict):
                 q.append((f'{prefix}.{k}' if prefix else k, v))
-            elif isinstance(v, list) and len(v) > 0 and v[0] == import_key:
+            elif isinstance(v, str) and v.startswith(import_key):
                 lcl_root = os.path.join(root, *prefix.split('.'))
-                d[f'{prefix}.{k}'] = cfg_import(
-                    v[1], root=lcl_root, delim=delim
+                full_key = f'{prefix}.{k}' if prefix else k
+                d[full_key] = cfg_import(
+                    v[len(import_key) :], root=lcl_root, delim=delim
                 )
     return d
 
@@ -280,6 +285,7 @@ def flip_dict(d):
         raise e
     return u
 
+
 def get_print(*, _verbose):
     def print_fn(*args, verbose=1, **kw):
         if verbose <= _verbose:
@@ -287,6 +293,7 @@ def get_print(*, _verbose):
             print(*args, **kw)
 
     return print_fn, print_fn
+
 
 def hydra_kw(*, use_cfg=False, protect_kw=True, transform_cfg=None):
     if not use_cfg and transform_cfg:

@@ -12,6 +12,7 @@ from termcolor import colored
 from subprocess import check_output as co
 from functools import wraps
 import argparse
+from mh.core import DotDict
 
 
 def find_files(directory, pattern):
@@ -56,9 +57,28 @@ def ctab(data, *, colors=None, headers, **kw):
     return tab(data, headers=headers, **kw)
 
 
+def exec_imports_legacy(
+    d: DotDict, *, root=None, delim='|', import_key='dimport'
+):
+    q = [('', d)]
+    root = root or os.getcwd()
+    while q:
+        prefix, curr = q.pop(0)
+        for k, v in curr.items():
+            if isinstance(v, DotDict) or isinstance(v, dict):
+                q.append((f'{prefix}.{k}' if prefix else k, v))
+            elif isinstance(v, list) and len(v) > 0 and v[0] == import_key:
+                lcl_root = os.path.join(root, *prefix.split('.'))
+                d[f'{prefix}.{k}'] = cfg_import(
+                    v[1], root=lcl_root, delim=delim
+                )
+    return d
+
+
 def remove_color(text):
     ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
     return ansi_escape.sub('', text)
+
 
 def save_metadata(*, path=None, cli=False):
     def decorator(func):
@@ -102,11 +122,13 @@ def save_metadata(*, path=None, cli=False):
 
     return decorator
 
+
 def sco(s, split=True):
     u = co(s, shell=True).decode("utf-8")
     if split:
         u = u.split("\n")[:-1]
     return u
+
 
 def subdict(d, *, inc=None, exc=None):
     inc = list(d.keys()) if inc is None else inc
@@ -114,7 +136,7 @@ def subdict(d, *, inc=None, exc=None):
     full_inc = set(inc).difference(exc)
     return {k: d[k] for k in full_inc}
 
+
 def vco(s):
     """vanilla check output"""
     return co(s, shell=True).decode('utf-8').strip()
-
