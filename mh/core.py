@@ -9,8 +9,11 @@ from functools import wraps
 
 
 class DotDict:
-    def __init__(self, d, self_ref_resolve=False):
-        D = copy.deepcopy(d)
+    def __init__(self, d, self_ref_resolve=False, deep=False):
+        if deep:
+            D = copy.deepcopy(d)
+        else:
+            D = d
         if type(d) is DotDict:
             self.__dict__.update(d.__dict__)
         else:
@@ -233,16 +236,19 @@ def dynamic_expand(src, target_shape):
 
 
 def dyn_import(*, path, mod, func=None):
-    if not path.startswith('/'):
-        path = os.path.join(os.getcwd(), path)
-    if not path.endswith('.py'):
-        path = os.path.join(path, f'{mod}.py')
+    if '.' in mod:
+        obj = importlib.import_module(mod)
+    else:
+        if not path.startswith('/'):
+            path = os.path.join(os.getcwd(), path)
+        if not path.endswith('.py'):
+            path = os.path.join(path, f'{mod}.py')
 
-    spec = importlib.util.spec_from_file_location(mod, path)
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[mod] = module
-    spec.loader.exec_module(module)
-    obj = module
+        spec = importlib.util.spec_from_file_location(mod, path)
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[mod] = module
+        spec.loader.exec_module(module)
+        obj = module
     if func is not None:
         obj = getattr(module, func)
     return obj
