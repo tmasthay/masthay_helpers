@@ -116,11 +116,11 @@ class DotDict:
                         return True
         return False
 
-    def self_ref_resolve(self, max_passes=10, glb=None, lcl=None):
+    def self_ref_resolve(self, max_passes=5, gbl=None, lcl=None, relax=False):
         lcl = lcl or {}
-        glb = glb or {}
+        gbl = gbl or {}
         lcl.update(locals())
-        glb.update(globals())
+        gbl.update(globals())
         passes = 0
         while passes < max_passes and self.has_self_ref():
             d = self.__dict__
@@ -134,15 +134,39 @@ class DotDict:
                         d[k] = DotDict(v)
                         q.append(d[k])
                     elif isinstance(v, str):
-                        if 'self' in v:
-                            d[k] = eval(v, glb, lcl)
-                        elif 'eval(' in v:
-                            d[k] = eval(v[5:-1], glb, lcl)
+                        try:
+                            if 'eval(' in v:
+                                d[k] = eval(v[5:-1], gbl, lcl)
+                            elif 'self' in v:
+                                d[k] = eval(v, gbl, lcl)
+
+                        except AttributeError:
+                            msg = (
+                                f"Could not resolve self reference for {k}={v}"
+                                f"\ngiven below\n\n{self}"
+                            )
+                            if not relax:
+                                raise AttributeError(msg)
+                            else:
+                                UserWarning(msg)
+                        except TypeError as e:
+                            msg = str(e)
+                            final_msg = (
+                                f'Error evaluating {v} of type {type(v)}'
+                                f'\n{msg}'
+                            )
+                            raise RuntimeError(final_msg)
             passes += 1
         if passes == max_passes:
-            raise ValueError(
-                f"Max passes ({max_passes}) reached. self_ref_resolve failed"
-            )
+            msg = f"Max passes ({max_passes}) reached. self_ref_resolve failed."
+            if not relax:
+                raise ValueError(msg)
+            else:
+                further_msg = (
+                    '. Continuing...set relax=False to raise error if '
+                    ' this behavior is unexpected.'
+                )
+                UserWarning(f'{msg}...{further_msg}')
         return self
 
     def filter(self, exclude=None, include=None, relax=False):
