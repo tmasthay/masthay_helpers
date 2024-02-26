@@ -85,6 +85,8 @@ class DotDict:
 
     def deep_get(self, k):
         d = self.__dict__
+        if type(k) != str:
+            return d[k]
         keys = k.split('.')
         for key in keys:
             d = d[key]
@@ -92,6 +94,8 @@ class DotDict:
 
     def deep_set(self, k, v):
         d = self.__dict__
+        if type(k) != str:
+            return d[k]
         keys = k.split('.')
         for key in keys[:-1]:
             try:
