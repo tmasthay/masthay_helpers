@@ -220,13 +220,17 @@ def save_frames(
     plot_name = f'{os.path.join(dir, name)}.{movie_format}'
     if verbose:
         print(f"Creating GIF at {plot_name} ...", end="")
+
+    kw = {'duration': duration, 'loop': loop}
+    kw = {k: v for k, v in kw.items() if v is not None}
+    if movie_format.upper() == "PDF":
+        kw = {}
     frames[0].save(
         plot_name,
         format=movie_format.upper(),
         append_images=frames[1:],
         save_all=True,
-        duration=duration,
-        loop=loop,
+        **kw,
     )
 
 
@@ -440,6 +444,12 @@ def apply_subplot(
     specs = cfg.plts[name]
     lyr = specs[layer]
     opts = lyr.get('opts', {})
+
+    if lyr.get('filt', None) is not None:
+        if lyr.filt == 'transpose':
+            data = data.T
+        else:
+            data = lyr.filt(data)
 
     order = cfg.get('order', list(cfg.plts.keys()))
     specs_idx = order.index(name) + 1

@@ -6,10 +6,13 @@ import sys
 import hydra
 from omegaconf import OmegaConf
 from functools import wraps
+import random
 
 
 class DotDict:
-    def __init__(self, d, self_ref_resolve=False, deep=False):
+    def __init__(self, d=None, self_ref_resolve=False, deep=False):
+        if d is None:
+            d = {}
         if deep:
             D = copy.deepcopy(d)
         else:
@@ -141,10 +144,11 @@ class DotDict:
                         try:
                             if 'eval(' in v:
                                 d[k] = eval(v[5:-1], gbl, lcl)
-                            elif 'self' in v:
+                            elif 'self.' in v:
                                 d[k] = eval(v, gbl, lcl)
 
                         except AttributeError:
+
                             msg = (
                                 f"Could not resolve self reference for {k}={v}"
                                 f"\ngiven below\n\n{self}"
@@ -278,7 +282,7 @@ def dyn_import(*, path, mod, func=None):
         spec.loader.exec_module(module)
         obj = module
     if func is not None:
-        obj = getattr(module, func)
+        obj = getattr(obj, func)
     return obj
 
 
@@ -401,6 +405,39 @@ def pandify(data, column_names):
     data_frame = pd.DataFrame(data.reshape(data.shape[0], -1), columns=columns)
 
     return data_frame
+
+
+def rand_slices(*shape, none_dims=None, N=1):
+    """
+    Generate random slices for specified dimensions of a given shape.
+
+    Parameters:
+    - shape: The shape of the array(s) as a tuple.
+    - none_dims: A list of dimensions to keep unchanged (zero-based indexing, supports negative values).
+    - N: The number of random elements to select.
+
+    Returns:
+    - A list of tuples, each tuple containing slice objects or integers for indexing into an array.
+    """
+    none_dims = none_dims or []
+    # Normalize negative indices in none_dims
+    none_dims = [d % len(shape) for d in none_dims]
+    # Initialize a list to hold the generated slices
+    generated_slices = []
+
+    for _ in range(N):
+        # Start with a list of slice(None) for each dimension
+        current_slices = [slice(None)] * len(shape)
+
+        # For dimensions not in none_dims, select a random index
+        for dim in range(len(shape)):
+            if dim not in none_dims:
+                random_index = random.randint(0, shape[dim] - 1)
+                current_slices[dim] = random_index
+
+        generated_slices.append(tuple(current_slices))
+
+    return generated_slices
 
 
 def rich_tensor(
