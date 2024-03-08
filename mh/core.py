@@ -493,3 +493,85 @@ def rich_tensor(
             )
         with open(df_filename, 'w') as f:
             f.write(csv_str)
+
+
+def torch_stats(report=None, black_formattable=True):
+    try:
+        import torch
+
+        all = [
+            'shape',
+            'dtype',
+            'mean',
+            'variance',
+            'median',
+            'min',
+            'max',
+            'stddev',
+            'RMS',
+            'L2',
+        ]
+        if not report:
+            report = ['shape']
+        if report in ['all', ['all']]:
+            report = all
+        report = set(report)
+
+        def helper(x):
+            stats = {}
+            if 'shape' in report:
+                stats['shape'] = x.shape
+            if 'dtype' in report:
+                stats['dtype'] = x.dtype
+            if 'mean' in report:
+                stats['mean'] = torch.mean(x).item()
+            if 'variance' in report:
+                stats['variance'] = torch.var(x).item()
+            if 'median' in report:
+                stats['median'] = torch.median(x).item()
+            if 'min' in report:
+                stats['min'] = torch.min(x).item()
+            if 'max' in report:
+                stats['max'] = torch.max(x).item()
+            if 'stddev' in report:
+                stats['stddev'] = torch.std(x).item()
+            if 'RMS' in report:
+                stats['RMS'] = torch.sqrt(torch.mean(x**2)).item()
+            if 'L2' in report:
+                stats['L2'] = torch.norm(x).item()
+            if black_formattable:
+                s = black_str(stats)
+            else:
+                s = ''
+                for k, v in stats.items():
+                    s += f'{k}: {v}\n'
+            return s
+
+    except ModuleNotFoundError as e:
+        msg = f'{e}\nIn order to use torch_stats, you need to install torch'
+        msg = f'{msg} with "pip install torch"'
+        raise ModuleNotFoundError(msg)
+
+    return helper
+
+
+def black_str(d: DotDict):
+    try:
+        import black
+
+        def stringify(curr):
+            for k, v in curr.items():
+                if isinstance(v, DotDict) or isinstance(v, dict):
+                    s = stringify(v)
+                else:
+                    s = str(v)
+                if type(s) == str and s.startswith('<') and s.endswith('>'):
+                    curr[k] = f'"{s}"'
+            return curr
+
+        s = black.format_str(str(stringify(d)), mode=black.FileMode())
+        return s
+    except ModuleNotFoundError as e:
+        msg = f'{e}\nIn order to use black_str, you need to install black formatter'
+        msg = f'{msg} with "pip install black"'
+        raise ModuleNotFoundError(msg)
