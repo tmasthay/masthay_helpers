@@ -575,3 +575,32 @@ def black_str(d: DotDict):
         msg = f'{e}\nIn order to use black_str, you need to install black formatter'
         msg = f'{msg} with "pip install black"'
         raise ModuleNotFoundError(msg)
+
+
+def yamlfy(c: DotDict, lcls, gbls) -> str:
+    try:
+        import yaml
+
+        u = eval(black_str(c), lcls, gbls)
+
+        def helper(d):
+            for k, v in d.items():
+                if isinstance(v, dict):
+                    d[k] = helper(v)
+                else:
+                    d[k] = str(v)
+            return d
+
+        u = helper(u)
+        return yaml.dump(u)
+    except ModuleNotFoundError as e:
+        msg = f'{e}\nIn order to use yamlfy, you need to install pyyaml'
+        msg = f'{msg} with "pip install pyyaml"'
+        raise ModuleNotFoundError(msg)
+
+
+def draise(*args, sep='\n'):
+    s = sep
+    for x in args:
+        s += str(x) + sep
+    raise ValueError(s)

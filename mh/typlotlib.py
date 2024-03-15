@@ -197,6 +197,7 @@ def get_frames_bool(
     for idx, plot_frame in iter:
         iter_time = time()
         curr_kw = plotter(data=data, idx=idx, fig=fig, axes=axes, **curr_kw)
+        curr_kw = curr_kw if curr_kw is not None else kw
         if plot_frame:
             frames.append(
                 frame_handler(data=data, idx=idx, fig=fig, axes=axes, **kw)
@@ -453,6 +454,7 @@ def apply_subplot(
 
     order = cfg.get('order', list(cfg.plts.keys()))
     specs_idx = order.index(name) + 1
+    # input(f'order={order}, specs_idx={specs_idx}, name={name}, layer={layer}')
     plt.subplot(*cfg.sub.shape, specs_idx)
 
     lyr.type = lyr.get('type', 'plot')
