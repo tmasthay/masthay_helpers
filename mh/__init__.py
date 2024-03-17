@@ -4,11 +4,15 @@ __all__ = [
     "import_env",
     "typlotlib",
     "core_legacy",
-    "jupyter"
+    "errors",
+    "jupyter",
+    "out",
 ]
 from .core import *
-from .typlotlib_legacy import *
-from .import_env import *
-from .typlotlib import *
 from .core_legacy import *
+from .errors import *
+from .import_env import *
 from .jupyter import *
+from .out import *
+from .typlotlib import *
+from .typlotlib_legacy import *
