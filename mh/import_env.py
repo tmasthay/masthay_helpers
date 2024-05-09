@@ -86,14 +86,14 @@ def get_local_modules(path, *, only_tracked=False, **kw):
     return res
 
 
-def init_modules(path, **kw):
+def init_modules(path, *, only_tracked=False, **kw):
     root = kw.get("root", False)
     unload = kw.get("unload", False)
     if root:
         local_modules = []
     else:
-        local_modules = get_local_modules(path, **kw)
-    subfolders = get_subfolders(path, **kw)
+        local_modules = get_local_modules(path, only_tracked=only_tracked, **kw)
+    subfolders = get_subfolders(path, only_tracked=only_tracked, **kw)
     [local_modules.append(e) for e in subfolders]
     s = "__all__ = [\n"
     for e in local_modules:
