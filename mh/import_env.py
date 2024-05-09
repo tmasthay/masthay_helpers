@@ -22,7 +22,7 @@ def get_local_name(s, ext=".py"):
 
 
 def get_tracked_files():
-    return set(sco('git ls-files --full-name --directory', True))
+    return set(sco('git ls-files | grep "*.py$" | grep -v "__init__.py" | xargs -I {} readlink -f', True))
 
 
 def get_subfolders(path, *, only_tracked=False, **kw):
@@ -72,6 +72,8 @@ def get_local_modules(path, *, only_tracked=False, **kw):
         r'find %s -mindepth 1 -maxdepth 1 -type f -name "*%sx"' % (path, ext)
     )
     [res.append(e) for e in res2]
+    input(res)
+    input(get_tracked_files())
     if only_tracked:
         res = [f for f in res if f in get_tracked_files()]
     res = [
