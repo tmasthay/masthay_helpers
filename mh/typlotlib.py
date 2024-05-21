@@ -182,6 +182,8 @@ def get_frames_bool(
 
     from time import time
 
+    print('Plotting frames...', flush=True, end='')
+    start_time = time()
     if framer is None:
 
         def default_frame_handler(*, data, idx, fig, axes, **kw2):
@@ -195,19 +197,20 @@ def get_frames_bool(
 
     curr_kw = kw
     for idx, plot_frame in iter:
-        iter_time = time()
+        # iter_time = time()
         curr_kw = plotter(data=data, idx=idx, fig=fig, axes=axes, **curr_kw)
         curr_kw = curr_kw if curr_kw is not None else kw
         if plot_frame:
             frames.append(
                 frame_handler(data=data, idx=idx, fig=fig, axes=axes, **kw)
             )
-        iter_time = time() - iter_time
-        print(
-            f'idx={idx} took {iter_time:.2f} seconds:'
-            f' len(frames)=={len(frames)}',
-            flush=True,
-        )
+        # iter_time = time() - iter_time
+        # print(
+        #     f'idx={idx} took {iter_time:.2f} seconds:'
+        #     f' len(frames)=={len(frames)}',
+        #     flush=True,
+        # )
+    print(f'done in {time() - start_time:.2f} seconds.', flush=True)
 
     return frames
 
@@ -441,6 +444,7 @@ def apply_subplot(
     ind_var=None,
     xlim=None,
     ylim=None,
+    **other_opts,
 ):
     specs = cfg.plts[name]
     lyr = specs[layer]
@@ -474,9 +478,9 @@ def apply_subplot(
     idx = slice(None) if idx in [None, 'all', ':'] else idx
     data_slice = data[idx]
     if ind_var is not None:
-        callback(ind_var, data_slice, **opts)
+        callback(ind_var, data_slice, **opts, **other_opts)
     else:
-        callback(data_slice, **opts)
+        callback(data_slice, **opts, **other_opts)
 
     if lyr.get('xlabel', None) is not None:
         plt.xlabel(f"{xlabel[0]}{lyr.xlabel}{xlabel[1]}")

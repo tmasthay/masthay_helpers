@@ -2,11 +2,30 @@ import copy
 import importlib
 import inspect
 import os
-import sys
-import hydra
-from omegaconf import OmegaConf
-from functools import wraps
 import random
+import sys
+from functools import wraps
+
+import hydra
+import yaml
+from hydra import compose, initialize
+from omegaconf import OmegaConf
+
+
+def dict_dump(d):
+    def sdict(input_dict):
+        """
+        Recursively convert all values in the dictionary to strings, ensuring proper serialization without
+        including unwanted Python object references in the YAML output.
+        """
+        if isinstance(input_dict, dict) or isinstance(input_dict, DotDict):
+            return {str(k): sdict(v) for k, v in input_dict.items()}
+        elif isinstance(input_dict, list):
+            return [sdict(element) for element in input_dict]
+        else:
+            return str(input_dict)
+
+    return yaml.dump(sdict(d))
 
 
 class DotDict:
@@ -56,6 +75,9 @@ class DotDict:
             v = DotDict(v)
         self.__dict__[k] = v
 
+    def __iter__(self):
+        return iter(self.__dict__)
+
     def getd(self, k, v):
         return self.__dict__.get(k, v)
 
@@ -75,7 +97,7 @@ class DotDict:
         self.__dict__.update(DotDict.get_dict(d))
 
     def str(self):
-        return str(self.__dict__)
+        return dict_dump(self.__dict__)
 
     def dict(self):
         return self.__dict__
@@ -148,7 +170,6 @@ class DotDict:
                                 d[k] = eval(v, gbl, lcl)
 
                         except AttributeError:
-
                             msg = (
                                 f"Could not resolve self reference for {k}={v}"
                                 f"\ngiven below\n\n{self}"
@@ -160,8 +181,7 @@ class DotDict:
                         except TypeError as e:
                             msg = str(e)
                             final_msg = (
-                                f'Error evaluating {v} of type {type(v)}'
-                                f'\n{msg}'
+                                f'Error evaluating {v} of type {type(v)}\n{msg}'
                             )
                             raise RuntimeError(final_msg)
             passes += 1
@@ -229,6 +249,42 @@ def clean_kwargs(func):
     return wrapper
 
 
+def colorize_yaml(lines, depth_color_map, value_color, max_length=160):
+    from rich.text import Text
+
+    colored_lines = Text()
+    for line in lines:
+        if len(line) > max_length:
+            line = line[:max_length] + '...'
+        # Detect the indentation level
+        stripped_line = line.lstrip()
+        indent_level = (len(line) - len(stripped_line)) // 2
+
+        # Determine the color based on the indentation level
+        color = depth_color_map.get(indent_level, 'white')
+
+        # Apply the color to the line without changing the indentation
+        if ':' in stripped_line:  # Key-value pair
+            key, value = stripped_line.split(':', 1)
+            colored_lines.append(
+                ' ' * (indent_level * 2)
+            )  # Preserve indentation
+            colored_lines.append(key + ': ', style=color)
+            colored_lines.append(value.strip(), style=value_color)
+        elif stripped_line.startswith('-'):  # List item
+            colored_lines.append(
+                ' ' * (indent_level * 2)
+            )  # Preserve indentation
+            colored_lines.append(stripped_line, style=value_color)
+        else:  # Handle keys without a value
+            colored_lines.append(
+                ' ' * (indent_level * 2)
+            )  # Preserve indentation
+            colored_lines.append(stripped_line, style=color)
+        colored_lines.append('\n')
+    return colored_lines
+
+
 def convert_dictconfig(obj, self_ref_resolve=False):
     return DotDict(
         OmegaConf.to_container(obj, resolve=True),
@@ -268,7 +324,7 @@ def dynamic_expand(src, target_shape):
 
 
 def dyn_import(*, path, mod, func=None):
-    if '.' in mod:
+    if '.' in mod or path.lower()[-4:] in ['null', 'none']:
         obj = importlib.import_module(mod)
     else:
         if not path.startswith('/'):
@@ -295,7 +351,7 @@ def easy_cfg(
 
 def exec_imports(d: DotDict, *, root=None, delim='|', import_key='^^'):
     q = [('', d)]
-    root = root or os.getcwd()
+    root = os.getcwd() if root is None else root
     while q:
         prefix, curr = q.pop(0)
         for k, v in curr.items():
@@ -307,6 +363,7 @@ def exec_imports(d: DotDict, *, root=None, delim='|', import_key='^^'):
                 d[full_key] = cfg_import(
                     v[len(import_key) :], root=lcl_root, delim=delim
                 )
+
     return d
 
 
@@ -443,6 +500,8 @@ def rand_slices(*shape, none_dims=None, N=1):
 def rich_tensor(
     tensor, *, name='Tensor', filename=None, max_width=None, strip=True, sep=','
 ):
+    import torch
+
     stats = dict(dtype=tensor.dtype, shape=tensor.shape)
     if tensor.dtype == torch.bool:
         return str(stats)
@@ -496,6 +555,47 @@ def rich_tensor(
 
 
 def torch_stats(report=None, black_formattable=True):
+    """
+    Calculate statistics of a torch tensor.
+
+    Args:
+        report (list or str, optional): Specifies which statistics to include in the report.
+            If not provided, only the shape of the tensor will be included.
+            Defaults to None.
+            Available options:
+                - 'shape': Shape of the tensor
+                - 'device': Device of the tensor
+                - 'dtype': Data type of the tensor
+                - 'mean': Mean value of the tensor
+                - 'variance': Variance of the tensor
+                - 'median': Median value of the tensor
+                - 'min': Minimum value of the tensor
+                - 'max': Maximum value of the tensor
+                - 'stddev': Standard deviation of the tensor
+                - 'RMS': Root mean square of the tensor
+                - 'L2': L2 norm of the tensor
+
+        black_formattable (bool, optional): Specifies whether to format the output using black.
+            If True, the output will be formatted using black_str function.
+            If False, the output will be a plain string.
+            Defaults to True.
+
+    Returns:
+        function: A helper function that calculates the requested statistics of a torch tensor.
+
+    Raises:
+        ModuleNotFoundError: If the torch module is not found, it raises an error with installation instructions.
+
+    Example:
+        >>> import torch
+        >>> stats = torch_stats(['shape', 'mean', 'min'])
+        >>> tensor = torch.tensor([1, 2, 3, 4, 5])
+        >>> print(stats(tensor))
+        shape: torch.Size([5])
+        mean: 3.0
+        min: 1
+    """
+
     try:
         import torch
 
@@ -512,7 +612,7 @@ def torch_stats(report=None, black_formattable=True):
             'L2',
         ]
         if not report:
-            report = ['shape']
+            report = ['shape', 'device', 'dtype']
         if report in ['all', ['all']]:
             report = all
         report = set(report)
@@ -521,6 +621,8 @@ def torch_stats(report=None, black_formattable=True):
             stats = {}
             if 'shape' in report:
                 stats['shape'] = x.shape
+            if 'device' in report:
+                stats['device'] = x.device
             if 'dtype' in report:
                 stats['dtype'] = x.dtype
             if 'mean' in report:
@@ -572,9 +674,51 @@ def black_str(d: DotDict):
         s = black.format_str(str(stringify(d)), mode=black.FileMode())
         return s
     except ModuleNotFoundError as e:
-        msg = f'{e}\nIn order to use black_str, you need to install black formatter'
+        msg = (
+            f'{e}\nIn order to use black_str, you need to install black'
+            ' formatter'
+        )
         msg = f'{msg} with "pip install black"'
         raise ModuleNotFoundError(msg)
+
+
+def set_print_options(
+    *,
+    precision=None,
+    threshold=None,
+    edgeitems=None,
+    linewidth=None,
+    profile=None,
+    sci_mode=None,
+    callback=None,
+):
+    try:
+        import torch
+
+        torch.set_printoptions(
+            precision=precision,
+            threshold=threshold,
+            edgeitems=edgeitems,
+            linewidth=linewidth,
+            profile=profile,
+            sci_mode=sci_mode,
+            callback=callback,
+        )
+    except TypeError:
+        print(
+            'Ignoring callback and using standard torch print options.\n'
+            'Modify your local pytorch distribution according to the following'
+            ' link to use callback.\n'
+            '    https://github.com/tmasthay/Experiments/tree/main/custom_torch_print'
+        )
+        torch.set_printoptions(
+            precision=precision,
+            threshold=threshold,
+            edgeitems=edgeitems,
+            linewidth=linewidth,
+            profile=profile,
+            sci_mode=sci_mode,
+        )
 
 
 def yamlfy(c: DotDict, lcls, gbls) -> str:

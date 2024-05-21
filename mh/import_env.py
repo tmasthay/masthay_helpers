@@ -21,6 +21,10 @@ def get_local_name(s, ext=".py"):
     return u.replace(ext, "")
 
 
+def get_tracked_files():
+    return set(sco('git ls-files | grep ".py$" | grep -v "__init__.py" | xargs -I {} readlink -f {}', True))
+
+
 def get_subfolders(path, **kw):
     omissions = kw.get("omissions", [])
     inclusions = kw.get("inclusions", None)
@@ -47,6 +51,10 @@ def get_subfolders(path, **kw):
         ]
     except:
         u = []
+    # if only_tracked:
+    #     input(u)
+    #     input(get_tracked_files())
+    #     u = [d for d in u if d in get_tracked_files()]
     if len(omissions) > 0 or inclusions != None:
         if inclusions != None:
             [omissions.append(e) for e in u if e not in inclusions]
@@ -56,7 +64,7 @@ def get_subfolders(path, **kw):
     return u
 
 
-def get_local_modules(path, **kw):
+def get_local_modules(path, *, only_tracked=False, **kw):
     local = kw.get("local", True)
     ext = kw.get("ext", ".py")
     res = sco(
@@ -66,6 +74,8 @@ def get_local_modules(path, **kw):
         r'find %s -mindepth 1 -maxdepth 1 -type f -name "*%sx"' % (path, ext)
     )
     [res.append(e) for e in res2]
+    if only_tracked:
+        res = [f for f in res if f in get_tracked_files()]
     res = [
         e
         for e in res
@@ -78,14 +88,14 @@ def get_local_modules(path, **kw):
     return res
 
 
-def init_modules(path, **kw):
+def init_modules(path, *, only_tracked=False, **kw):
     root = kw.get("root", False)
     unload = kw.get("unload", False)
     if root:
         local_modules = []
     else:
-        local_modules = get_local_modules(path, **kw)
-    subfolders = get_subfolders(path, **kw)
+        local_modules = get_local_modules(path, only_tracked=only_tracked, **kw)
+    subfolders = get_subfolders(path, only_tracked=only_tracked, **kw)
     [local_modules.append(e) for e in subfolders]
     s = "__all__ = [\n"
     for e in local_modules:
