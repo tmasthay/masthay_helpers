@@ -7,8 +7,25 @@ import sys
 from functools import wraps
 
 import hydra
+import yaml
 from hydra import compose, initialize
 from omegaconf import OmegaConf
+
+
+def dict_dump(d):
+    def sdict(input_dict):
+        """
+        Recursively convert all values in the dictionary to strings, ensuring proper serialization without
+        including unwanted Python object references in the YAML output.
+        """
+        if isinstance(input_dict, dict) or isinstance(input_dict, DotDict):
+            return {str(k): sdict(v) for k, v in input_dict.items()}
+        elif isinstance(input_dict, list):
+            return [sdict(element) for element in input_dict]
+        else:
+            return str(input_dict)
+
+    return yaml.dump(sdict(d))
 
 
 class DotDict:
@@ -80,7 +97,7 @@ class DotDict:
         self.__dict__.update(DotDict.get_dict(d))
 
     def str(self):
-        return str(self.__dict__)
+        return dict_dump(self.__dict__)
 
     def dict(self):
         return self.__dict__
@@ -663,6 +680,45 @@ def black_str(d: DotDict):
         )
         msg = f'{msg} with "pip install black"'
         raise ModuleNotFoundError(msg)
+
+
+def set_print_options(
+    *,
+    precision=None,
+    threshold=None,
+    edgeitems=None,
+    linewidth=None,
+    profile=None,
+    sci_mode=None,
+    callback=None,
+):
+    try:
+        import torch
+
+        torch.set_printoptions(
+            precision=precision,
+            threshold=threshold,
+            edgeitems=edgeitems,
+            linewidth=linewidth,
+            profile=profile,
+            sci_mode=sci_mode,
+            callback=callback,
+        )
+    except TypeError:
+        print(
+            'Ignoring callback and using standard torch print options.\n'
+            'Modify your local pytorch distribution according to the following'
+            ' link to use callback.\n'
+            '    https://github.com/tmasthay/Experiments/tree/main/custom_torch_print'
+        )
+        torch.set_printoptions(
+            precision=precision,
+            threshold=threshold,
+            edgeitems=edgeitems,
+            linewidth=linewidth,
+            profile=profile,
+            sci_mode=sci_mode,
+        )
 
 
 def yamlfy(c: DotDict, lcls, gbls) -> str:
