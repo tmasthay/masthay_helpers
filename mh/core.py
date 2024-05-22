@@ -97,7 +97,7 @@ class DotDict:
         self.__dict__.update(DotDict.get_dict(d))
 
     def str(self):
-        return dict_dump(self.__dict__)
+        return str(self.__dict__)
 
     def dict(self):
         return self.__dict__
