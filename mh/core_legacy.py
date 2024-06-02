@@ -139,4 +139,10 @@ def subdict(d, *, inc=None, exc=None):
 
 def vco(s):
     """vanilla check output"""
-    return co(s, shell=True).decode('utf-8').strip()
+    try:
+        return co(s, shell=True).decode('utf-8').strip()
+    except CalledProcessError as e:
+        if "returned non-zero exit status 1" in str(e):
+            return ""
+        else:
+            raise e
