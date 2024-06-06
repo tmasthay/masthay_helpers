@@ -219,27 +219,37 @@ class DotDict:
                 {k: self.get(k, None) for k in include.difference(exclude)}
             )
 
+
 class DotDictImmutable(DotDict):
     def __reject__(self, *args, **kwargs):
-        raise AttributeError("DotDictImmutable is immutable. Use DotDict instead if you intend to modify the object.")
+        raise AttributeError(
+            "DotDictImmutable is immutable. Use DotDict instead if you intend to modify the object."
+        )
+
     def __setitem__(self, k, v):
-        self.__reject__(k,v)
+        self.__reject__(k, v)
+
     def __setattr__(self, k, v):
         self.__reject__(self, k, v)
+
     def deep_set(self, k, v):
         self.__reject__(k, v)
+
     def update(self, d):
         self.__reject__(d)
+
     def self_ref_resolve(self, *args, **kwargs):
         self.__reject__(*args, **kwargs)
+
     def setdefault(self, k, v):
         self.__reject__(k, v)
+
     def __delitem__(self, k):
         self.__reject__(k)
+
     def __delattr__(self, k):
         self.__reject__(k)
-        
-    
+
 
 def cfg_import(s, *, root=None, delim='|'):
     info = s.split(delim)
@@ -306,11 +316,12 @@ def colorize_yaml(lines, depth_color_map, value_color, max_length=160):
     return colored_lines
 
 
-def convert_dictconfig(obj, self_ref_resolve=False):
-    return DotDict(
-        OmegaConf.to_container(obj, resolve=True),
-        self_ref_resolve=self_ref_resolve,
-    )
+def convert_dictconfig(obj, self_ref_resolve=False, mutable=True):
+    d = OmegaConf.to_container(obj, resolve=True)
+    if mutable:
+        return DotDict(d, self_ref_resolve=self_ref_resolve)
+    else:
+        return DotDictImmutable(d, self_ref_resolve=self_ref_resolve)
 
 
 def depandify(data_frame):
