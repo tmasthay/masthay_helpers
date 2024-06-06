@@ -9,7 +9,7 @@ from fnmatch import fnmatch
 import tabulate as tab
 import re
 from termcolor import colored
-from subprocess import check_output as co
+from subprocess import check_output as co, CalledProcessError
 from functools import wraps
 import argparse
 from mh.core import DotDict

@@ -219,6 +219,27 @@ class DotDict:
                 {k: self.get(k, None) for k in include.difference(exclude)}
             )
 
+class DotDictImmutable(DotDict):
+    def __reject__(self, *args, **kwargs):
+        raise AttributeError("DotDictImmutable is immutable. Use DotDict instead if you intend to modify the object.")
+    def __setitem__(self, k, v):
+        self.__reject__(k,v)
+    def __setattr__(self, k, v):
+        self.__reject__(self, k, v)
+    def deep_set(self, k, v):
+        self.__reject__(k, v)
+    def update(self, d):
+        self.__reject__(d)
+    def self_ref_resolve(self, *args, **kwargs):
+        self.__reject__(*args, **kwargs)
+    def setdefault(self, k, v):
+        self.__reject__(k, v)
+    def __delitem__(self, k):
+        self.__reject__(k)
+    def __delattr__(self, k):
+        self.__reject__(k)
+        
+    
 
 def cfg_import(s, *, root=None, delim='|'):
     info = s.split(delim)
