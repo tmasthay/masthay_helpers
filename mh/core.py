@@ -63,6 +63,17 @@ class DotDict:
             return self.deep_get(k)
         except KeyError:
             return default_val
+        
+    def simple_dict(self):
+        u = {}
+        for k, v in self.items():
+            if isinstance(v, DotDict):
+                u[k] = v.__dict__
+            elif isinstance(v, list):
+                u[k] = [e.__dict__ if isinstance(e, DotDict) else e for e in v]
+            else:
+                u[k] = v
+        return u
 
     def __setitem__(self, k, v):
         self.deep_set(k, v)
