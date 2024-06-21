@@ -63,7 +63,7 @@ class DotDict:
             return self.deep_get(k)
         except KeyError:
             return default_val
-        
+
     def simple_dict(self):
         u = {}
         for k, v in self.items():
@@ -234,7 +234,8 @@ class DotDict:
 class DotDictImmutable(DotDict):
     def __reject__(self, *args, **kwargs):
         raise AttributeError(
-            "DotDictImmutable is immutable. Use DotDict instead if you intend to modify the object."
+            "DotDictImmutable is immutable. Use DotDict instead if you intend"
+            " to modify the object."
         )
 
     def __setitem__(self, k, v):
@@ -263,17 +264,22 @@ class DotDictImmutable(DotDict):
 
 
 def cfg_import(s, *, root=None, delim='|'):
-    info = s.split(delim)
+    info = s.replace('^^', '').split(delim)
     root = root or os.getcwd()
+
+    # ^^module
     if len(info) == 1:
         path, mod, func = root, info[0], None
+    # ^^module|function
     elif len(info) == 2:
         path, mod, func = root, info[0], info[1]
+    # ^^import_path|module|function
     else:
         path, mod, func = info
         if path.lower() == "cwd":
             path = os.getcwd()
 
+    # when function not specified, then we use a module import
     if func is not None and func.lower() in ['none', 'null', '']:
         func = None
 
@@ -367,6 +373,7 @@ def dynamic_expand(src, target_shape):
 
 
 def dyn_import(*, path, mod, func=None):
+    path = path or 'null'
     if '.' in mod or path.lower()[-4:] in ['null', 'none']:
         obj = importlib.import_module(mod)
     else:
