@@ -276,8 +276,11 @@ def cfg_import(s, *, root=None, delim='|'):
     # ^^import_path|module|function
     else:
         path, mod, func = info
-        if path.lower() == "cwd":
-            path = os.getcwd()
+
+    if path.startswith('cwd'):
+        tokens = path.split(os.sep)
+        tokens[0] = os.getcwd()
+        path = os.sep.join(tokens)
 
     # when function not specified, then we use a module import
     if func is not None and func.lower() in ['none', 'null', '']:
