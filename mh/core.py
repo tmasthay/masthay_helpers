@@ -89,6 +89,9 @@ class DotDict:
     def __iter__(self):
         return iter(self.__dict__)
 
+    def __delitem__(self, k):
+        del self.__dict__[k]
+
     def getd(self, k, v):
         return self.__dict__.get(k, v)
 
@@ -286,7 +289,9 @@ def cfg_import(s, *, root=None, delim='|'):
     if func is not None and func.lower() in ['none', 'null', '']:
         func = None
 
-    path = os.path.abspath(path)
+    if path not in ['null', 'none', '']:
+        path = os.path.abspath(path)
+
     return dyn_import(path=path, mod=mod, func=func)
 
 
