@@ -144,7 +144,7 @@ class DotDict:
                 d = d[key]
         d[keys[-1]] = v
 
-    def has_self_ref(self):
+    def has_self_ref(self, *, self_key='self'):
         d = self.__dict__
         q = [d]
         while q:
@@ -155,7 +155,7 @@ class DotDict:
                 elif isinstance(v, dict):
                     q.append(v)
                 elif isinstance(v, str):
-                    if 'self' in v or 'eval(' in v:
+                    if self_key in v or 'eval(' in v:
                         return True
         return False
 
@@ -165,12 +165,14 @@ class DotDict:
         lcl.update(locals())
         gbl.update(globals())
         passes = 0
-        while passes < max_passes and self.has_self_ref():
+        while passes < max_passes and self.has_self_ref(self_key=self_key):
             d = self.__dict__
             q = [d]
             while q:
                 d = q.pop()
                 for k, v in d.items():
+                    # if self_key != 'self':
+                    #     input(f'{k}: {v}')
                     if isinstance(v, DotDict):
                         q.append(v)
                     elif isinstance(v, dict):
@@ -180,7 +182,7 @@ class DotDict:
                         try:
                             if 'eval(' in v:
                                 d[k] = eval(v[5:-1], gbl, lcl)
-                            elif v.startswith(self_key):
+                            elif v.startswith(f'{self_key}.'):
                                 d[k] = eval(v.replace(self_key, 'self'), gbl, lcl)
 
                         except AttributeError:
@@ -612,7 +614,7 @@ def rich_tensor(
             f.write(csv_str)
 
 
-def torch_stats(report=None, black_formattable=True):
+def torch_stats(report=None, black_pipable=True):
     """
     Calculate statistics of a torch tensor.
 
@@ -675,37 +677,33 @@ def torch_stats(report=None, black_formattable=True):
             report = all
         report = set(report)
 
+        get = lambda y: str(y) if black_pipable else y
         def helper(x):
+            y = x.float()
             stats = {}
             if 'shape' in report:
-                stats['shape'] = x.shape
+                stats['shape'] = get(x.shape)
             if 'device' in report:
-                stats['device'] = x.device
+                stats['device'] = get(x.device)
             if 'dtype' in report:
-                stats['dtype'] = x.dtype
+                stats['dtype'] = get(x.dtype)
             if 'mean' in report:
-                stats['mean'] = torch.mean(x).item()
+                stats['mean'] = torch.mean(y).item()
             if 'variance' in report:
-                stats['variance'] = torch.var(x).item()
+                stats['variance'] = torch.var(y).item()
             if 'median' in report:
-                stats['median'] = torch.median(x).item()
+                stats['median'] = torch.median(y).item()
             if 'min' in report:
-                stats['min'] = torch.min(x).item()
+                stats['min'] = torch.min(y).item()
             if 'max' in report:
-                stats['max'] = torch.max(x).item()
+                stats['max'] = torch.max(y).item()
             if 'stddev' in report:
-                stats['stddev'] = torch.std(x).item()
+                stats['stddev'] = torch.std(y).item()
             if 'RMS' in report:
-                stats['RMS'] = torch.sqrt(torch.mean(x**2)).item()
+                stats['RMS'] = torch.sqrt(torch.mean(y**2)).item()
             if 'L2' in report:
-                stats['L2'] = torch.norm(x).item()
-            if black_formattable:
-                s = black_str(stats)
-            else:
-                s = ''
-                for k, v in stats.items():
-                    s += f'{k}: {v}\n'
-            return s
+                stats['L2'] = torch.norm(y).item()
+            return str(stats)
 
     except ModuleNotFoundError as e:
         msg = f'{e}\nIn order to use torch_stats, you need to install torch'
