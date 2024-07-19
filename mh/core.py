@@ -156,7 +156,7 @@ class DotDict:
                         return True
         return False
 
-    def self_ref_resolve(self, max_passes=5, gbl=None, lcl=None, relax=False):
+    def self_ref_resolve(self, *, self_key='self', max_passes=5, gbl=None, lcl=None, relax=False):
         lcl = lcl or {}
         gbl = gbl or {}
         lcl.update(locals())
@@ -177,8 +177,8 @@ class DotDict:
                         try:
                             if 'eval(' in v:
                                 d[k] = eval(v[5:-1], gbl, lcl)
-                            elif 'self.' in v:
-                                d[k] = eval(v, gbl, lcl)
+                            elif v.startswith(self_key):
+                                d[k] = eval(v.replace(self_key, 'self'), gbl, lcl)
 
                         except AttributeError:
                             msg = (
