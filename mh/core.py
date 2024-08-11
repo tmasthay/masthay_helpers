@@ -5,6 +5,7 @@ import os
 import random
 import sys
 from functools import wraps
+from typing import get_type_hints
 
 import hydra
 import yaml
@@ -159,7 +160,9 @@ class DotDict:
                         return True
         return False
 
-    def self_ref_resolve(self, *, self_key='self', max_passes=5, gbl=None, lcl=None, relax=False):
+    def self_ref_resolve(
+        self, *, self_key='self', max_passes=5, gbl=None, lcl=None, relax=False
+    ):
         lcl = lcl or {}
         gbl = gbl or {}
         lcl.update(locals())
@@ -183,7 +186,9 @@ class DotDict:
                             if 'eval(' in v:
                                 d[k] = eval(v[5:-1], gbl, lcl)
                             elif v.startswith(f'{self_key}.'):
-                                d[k] = eval(v.replace(self_key, 'self'), gbl, lcl)
+                                d[k] = eval(
+                                    v.replace(self_key, 'self'), gbl, lcl
+                                )
 
                         except AttributeError:
                             msg = (
@@ -678,6 +683,7 @@ def torch_stats(report=None, black_pipable=True):
         report = set(report)
 
         get = lambda y: str(y) if black_pipable else y
+
         def helper(x):
             y = x.float()
             stats = {}
@@ -804,3 +810,25 @@ def draise(*args, sep='\n'):
     for x in args:
         s += str(x) + sep
     raise ValueError(s)
+
+
+def enforce_types(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        sig = inspect.signature(func)
+        bound_args = sig.bind(*args, **kwargs)
+        bound_args.apply_defaults()
+
+        type_hints = get_type_hints(func)
+
+        for arg_name, value in bound_args.arguments.items():
+            expected_type = type_hints.get(arg_name)
+            if expected_type and not isinstance(value, expected_type):
+                raise ValueError(
+                    f"{arg_name} must be of type {expected_type}, got"
+                    f" {type(value)}"
+                )
+
+        return func(*args, **kwargs)
+
+    return wrapper
