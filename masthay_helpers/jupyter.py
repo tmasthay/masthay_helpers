@@ -187,19 +187,6 @@ def iplot_workhorse(*, data_frame, cols=1, rules):
     ):
         dim = 1 if dim == "1D" else 2
         if special_dim_0 == special_dim_1 and dim == 2:
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-=======
-=======
->>>>>>> Stashed changes
-<<<<<<< HEAD
-            print("NO CHANGE", flush=True)
-=======
->>>>>>> 9466b1a5c7e48b38a670b9c110aa4b6cc5649c81
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
             return reactive_plot.last
         special_dims = [special_dim_0, special_dim_1]
         idx = [
