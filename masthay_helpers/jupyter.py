@@ -82,22 +82,7 @@ def plot_series(*, data, rules, merge, idx, kw):
     for i in range(data.shape[0]):
         idx_lcl = tuple([i] + list(idx))
         r = rules(idx=idx_lcl, **kw)
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
         curr = r['plot_type'](data[idx_lcl], **r['loop']).opts(**r['opts'])
-=======
-=======
->>>>>>> Stashed changes
-<<<<<<< HEAD
-        curr = r["plot_type"](data[idx_lcl], **r["loop"]).opts(**r["opts"])
-        print(f'opts = {r["opts"]}', flush=True)
-=======
-        curr = r['plot_type'](data[idx_lcl], **r['loop']).opts(**r['opts'])
->>>>>>> 9466b1a5c7e48b38a670b9c110aa4b6cc5649c81
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
         runner.append(curr)
     return merge(runner)
 
