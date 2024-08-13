@@ -7,15 +7,7 @@ with open("requirements.txt") as f:
 
 setup(
     name="masthay_helpers",
-<<<<<<< Updated upstream
     version="0.2.73",
-=======
-<<<<<<< HEAD
-    version="0.2.71",
-=======
-    version="0.2.73",
->>>>>>> 9466b1a5c7e48b38a670b9c110aa4b6cc5649c81
->>>>>>> Stashed changes
     author="Tyler Masthay",
     description="Helper functions for repetitive and useful tasks",
     long_description=open("README.md").read(),

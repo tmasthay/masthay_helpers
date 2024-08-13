@@ -83,14 +83,20 @@ def plot_series(*, data, rules, merge, idx, kw):
         idx_lcl = tuple([i] + list(idx))
         r = rules(idx=idx_lcl, **kw)
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
         curr = r['plot_type'](data[idx_lcl], **r['loop']).opts(**r['opts'])
 =======
+=======
+>>>>>>> Stashed changes
 <<<<<<< HEAD
         curr = r["plot_type"](data[idx_lcl], **r["loop"]).opts(**r["opts"])
         print(f'opts = {r["opts"]}', flush=True)
 =======
         curr = r['plot_type'](data[idx_lcl], **r['loop']).opts(**r['opts'])
 >>>>>>> 9466b1a5c7e48b38a670b9c110aa4b6cc5649c81
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
         runner.append(curr)
     return merge(runner)
@@ -197,11 +203,17 @@ def iplot_workhorse(*, data_frame, cols=1, rules):
         dim = 1 if dim == "1D" else 2
         if special_dim_0 == special_dim_1 and dim == 2:
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 =======
+=======
+>>>>>>> Stashed changes
 <<<<<<< HEAD
             print("NO CHANGE", flush=True)
 =======
 >>>>>>> 9466b1a5c7e48b38a670b9c110aa4b6cc5649c81
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
             return reactive_plot.last
         special_dims = [special_dim_0, special_dim_1]
