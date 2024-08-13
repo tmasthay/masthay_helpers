@@ -1,18 +1,20 @@
-from subprocess import check_output as co
-import os
-import numpy as np
-import subprocess
-import re
-from functools import wraps
-import sys
 import argparse
-import textwrap
-from itertools import product
-import black
-import torch
 import inspect
+import os
+import re
+import subprocess
+import sys
+import textwrap
+from functools import wraps
+from itertools import product
+from subprocess import check_output as co
+
+import black
+import numpy as np
 import pandas as pd
+import torch
 from returns.curry import curry, partial
+from termcolor import colored
 
 
 class GlobalHelpers:
@@ -676,3 +678,7 @@ def extend_dict(d, *, add=None, sub=None):
 
 def bstr(*args):
     return "".join(args)
+
+
+def cprint(s, color="red", **kw):
+    print(colored(s, color), **kw)

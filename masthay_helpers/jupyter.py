@@ -1,19 +1,21 @@
-import pandas as pd
-import panel as pn
-import holoviews as hv
-import numpy as np
-import torch
-from .global_helpers import (
-    filter_kw,
-    pandify,
-    depandify,
-    get_full_slices,
-    call_vars,
-)
 import copy
 import importlib
+
+import holoviews as hv
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import panel as pn
+import torch
 from returns.curry import curry
+
+from .global_helpers import (
+    call_vars,
+    depandify,
+    filter_kw,
+    get_full_slices,
+    pandify,
+)
 
 
 def get_axes(slices):
@@ -80,8 +82,7 @@ def plot_series(*, data, rules, merge, idx, kw):
     for i in range(data.shape[0]):
         idx_lcl = tuple([i] + list(idx))
         r = rules(idx=idx_lcl, **kw)
-        curr = r["plot_type"](data[idx_lcl], **r["loop"]).opts(**r["opts"])
-        print(f'opts = {r["opts"]}', flush=True)
+        curr = r['plot_type'](data[idx_lcl], **r['loop']).opts(**r['opts'])
         runner.append(curr)
     return merge(runner)
 
@@ -186,7 +187,6 @@ def iplot_workhorse(*, data_frame, cols=1, rules):
     ):
         dim = 1 if dim == "1D" else 2
         if special_dim_0 == special_dim_1 and dim == 2:
-            print("NO CHANGE", flush=True)
             return reactive_plot.last
         special_dims = [special_dim_0, special_dim_1]
         idx = [
