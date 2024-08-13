@@ -99,7 +99,7 @@ def plot_series(*, data, rules, merge, idx, kw):
     return merge(runner)
 
 
-def iplot_workhorse(*, data_frame, cols=1, rules):
+def iplot_workhorse(*, data_frame, cols=1, rules, steps):
     # (1) Check if DataFrame has at least 3 columns
     if len(data_frame.columns) < 3:
         raise ValueError(
@@ -136,7 +136,10 @@ def iplot_workhorse(*, data_frame, cols=1, rules):
 
     sliders = [
         pn.widgets.IntSlider(
-            name=index_names[i], start=0, end=max(1, df_shape[i + 1] - 1)
+            name=index_names[i],
+            start=0,
+            end=max(1, df_shape[i + 1] - 1),
+            step=steps[i],
         )
         for i in range(len(index_names))
     ]
@@ -245,9 +248,11 @@ def iplot_workhorse(*, data_frame, cols=1, rules):
     return layout
 
 
-def iplot(*, data, column_names=None, cols, rules):
+def iplot(*, data, column_names=None, cols, rules, steps):
     if column_names is not None:
         data_frame = pandify(data, column_names)
     else:
         data_frame = data
-    return iplot_workhorse(data_frame=data_frame, cols=cols, rules=rules)
+    return iplot_workhorse(
+        data_frame=data_frame, cols=cols, rules=rules, steps=steps
+    )

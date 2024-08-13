@@ -115,7 +115,10 @@ class DotDict:
         return str(self.__dict__)
 
     def dict(self):
-        return self.__dict__
+        return {
+            k: v if not isinstance(v, DotDict) else v.dict()
+            for k, v in self.items()
+        }
 
     def __str__(self):
         return self.str()
