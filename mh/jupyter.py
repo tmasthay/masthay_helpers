@@ -59,8 +59,8 @@ def rules_two(
     loop = {
         "label": loop_info["labels"][idx[0]],
         "kdims": kdims,
-        "xlabel": column_names[active_dims[0]],
-        "ylabel": column_names[active_dims[1]],
+        # "xlabel": column_names[active_dims[0]],
+        # "ylabel": column_names[active_dims[1]],
     }
     opts = {
         "cmap": cmap,
@@ -84,10 +84,11 @@ def plot_series(*, data, rules, merge, idx, kw):
             linestyles = ['solid', 'dashed', 'dashdot']
             markers = ['*', 'o', '^', 's', 'p', 'h', 'H', 'D', 'd', 'P', 'X']
 
-            extras = {
-                'linestyle': linestyles[i] if i < 2 else 'dashed',
-                'marker': markers[i % len(markers)],
-            }
+            # extras = {
+            #     'linestyle': linestyles[i] if i < 2 else 'dashed',
+            #     'marker': markers[i % len(markers)],
+            # }
+            extras = {}
             r['opts'].update(extras)
         return r, idx_lcl
 

@@ -511,6 +511,8 @@ def hydra_out(name: str = '') -> str:
 
 
 def pandify(data, column_names):
+    import pandas as pd
+
     if len(data.shape) < 2:
         raise ValueError("Data should have at least 2 dimensions.")
 

@@ -9,4 +9,6 @@ panel>=1.2.3
 returns>=0.22.0
 tabulate>=0.8.9
 termcolor>=1.1.0
+hydra-core>=1.1.0
 # torch==2.0.1
+# jupyterlab
