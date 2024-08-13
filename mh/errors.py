@@ -1,3 +1,8 @@
+def easy_handle(val: bool, err: Exception):
+    if val:
+        raise err
+
+
 class NotEnoughResourcesError(Exception):
     pass
 
