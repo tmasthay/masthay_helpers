@@ -31,11 +31,12 @@ def rules_one(*, opts_info, loop_info, data, column_names, idx, active_dim):
     active_data_slice = data[tuple(fixed_indices)]
     active_min, active_max = active_data_slice.min(), active_data_slice.max()
     opts_info["ylim"] = opts_info.get("ylim", (active_min, active_max))
-    opts = {
-        "ylim": opts_info["ylim"],
-        "hooks": opts_info["hooks"],
-        "xlabel": column_names[active_dim],
-    }
+    # opts = {
+    #     "ylim": opts_info["ylim"],
+    #     "hooks": opts_info["hooks"],
+    #     "xlabel": column_names[active_dim],
+    # }
+    opts = {"hooks": opts_info["hooks"]}
 
     return {"opts": opts, "loop": loop, "plot_type": hv.Curve}
 
@@ -99,7 +100,7 @@ def plot_series(*, data, rules, merge, idx, kw):
     return merge(runner)
 
 
-def iplot_workhorse(*, data_frame, cols=1, rules, steps):
+def iplot_workhorse(*, data_frame, cols=1, rules):
     # (1) Check if DataFrame has at least 3 columns
     if len(data_frame.columns) < 3:
         raise ValueError(
@@ -136,10 +137,7 @@ def iplot_workhorse(*, data_frame, cols=1, rules, steps):
 
     sliders = [
         pn.widgets.IntSlider(
-            name=index_names[i],
-            start=0,
-            end=max(1, df_shape[i + 1] - 1),
-            step=steps[i],
+            name=index_names[i], start=0, end=max(1, df_shape[i + 1] - 1)
         )
         for i in range(len(index_names))
     ]
@@ -248,11 +246,9 @@ def iplot_workhorse(*, data_frame, cols=1, rules, steps):
     return layout
 
 
-def iplot(*, data, column_names=None, cols, rules, steps):
+def iplot(*, data, column_names=None, cols, rules):
     if column_names is not None:
         data_frame = pandify(data, column_names)
     else:
         data_frame = data
-    return iplot_workhorse(
-        data_frame=data_frame, cols=cols, rules=rules, steps=steps
-    )
+    return iplot_workhorse(data_frame=data_frame, cols=cols, rules=rules)
