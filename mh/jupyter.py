@@ -82,8 +82,8 @@ def plot_series(*, data, rules, merge, idx, kw):
         idx_lcl = tuple([i] + list(idx))
         r = rules(idx=idx_lcl, **kw)
         if r['plot_type'] == hv.Curve:
-            linestyles = ['solid', 'dashed', 'dashdot']
-            markers = ['*', 'o', '^', 's', 'p', 'h', 'H', 'D', 'd', 'P', 'X']
+            # linestyles = ['solid', 'dashed', 'dashdot']
+            # markers = ['*', 'o', '^', 's', 'p', 'h', 'H', 'D', 'd', 'P', 'X']
 
             # extras = {
             #     'linestyle': linestyles[i] if i < 2 else 'dashed',
@@ -252,3 +252,40 @@ def iplot(*, data, column_names=None, cols, rules):
     else:
         data_frame = data
     return iplot_workhorse(data_frame=data_frame, cols=cols, rules=rules)
+
+
+def get_servable(d):
+    import torch
+
+    data = torch.load(d.path)
+    column_names = d.column_names
+    if d.unsqueeze.get('perform', False):
+        data = data.unsqueeze(0)
+        column_names = [
+            d.unsqueeze.get('column_name', 'ROOT_VAR')
+        ] + column_names
+    labels = [f"{column_names[0]} {i}" for i in range(data.shape[0])]
+    one = rules_one(
+        opts_info=d.one.get('opts_info', {}),
+        loop_info={**d.one.get('loop_info', {}), **{'labels': labels}},
+    )
+    two = rules_two(
+        opts_info=d.two.get('opts_info', {}),
+        loop_info={**d.two.get('loop_info', {}), **{'labels': labels}},
+    )
+    layout = iplot(
+        data=data,
+        column_names=column_names,
+        cols=d.get('cols', 2),
+        rules={'one': one, 'two': two},
+    )
+    return layout
+
+
+def get_cfg_servables(path):
+    from dotmap import DotMap
+    from omegaconf import OmegaConf
+
+    cfg = OmegaConf.load(path)
+    cfg = DotMap(OmegaConf.to_container(cfg))
+    return DotMap({k: get_servable(v) for k, v in cfg.items()})
