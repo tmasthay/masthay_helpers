@@ -1,6 +1,7 @@
 import holoviews as hv
 import matplotlib.pyplot as plt
 import panel as pn
+from omegaconf import OmegaConf
 from returns.curry import curry
 
 from .core import depandify, pandify
@@ -256,9 +257,14 @@ def iplot(*, data, column_names=None, cols, rules):
 
 def get_servable(d):
     import torch
+    from dotmap import DotMap
 
     data = torch.load(d.path)
-    column_names = d.column_names
+    column_names = d.get(
+        'column_names', [f'VAR {i+1}' for i in range(len(data.shape[1:]))]
+    )
+
+    d.unsqueeze = d.get('unsqueeze', DotMap({}))
     if d.unsqueeze.get('perform', False):
         data = data.unsqueeze(0)
         column_names = [
@@ -267,11 +273,11 @@ def get_servable(d):
     labels = [f"{column_names[0]} {i}" for i in range(data.shape[0])]
     one = rules_one(
         opts_info=d.one.get('opts_info', {}),
-        loop_info={**d.one.get('loop_info', {}), **{'labels': labels}},
+        loop_info={**{'labels': labels}, **d.one.get('loop_info', {})},
     )
     two = rules_two(
-        opts_info=d.two.get('opts_info', {}),
-        loop_info={**d.two.get('loop_info', {}), **{'labels': labels}},
+        opts_info=d.two.get('opts_info', {'colorbar': True}),
+        loop_info={**{'labels': labels}, **d.two.get('loop_info', {})},
     )
     layout = iplot(
         data=data,
@@ -284,8 +290,7 @@ def get_servable(d):
 
 def get_cfg_servables(path):
     from dotmap import DotMap
-    from omegaconf import OmegaConf
 
     cfg = OmegaConf.load(path)
-    cfg = DotMap(OmegaConf.to_container(cfg))
+    cfg = DotMap(OmegaConf.to_container(cfg, resolve=True))
     return DotMap({k: get_servable(v) for k, v in cfg.items()})
