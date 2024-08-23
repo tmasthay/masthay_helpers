@@ -1,11 +1,38 @@
+from typing import Union
+
 import holoviews as hv
 import ipywidgets as widgets
 import matplotlib.pyplot as plt
+import numpy
 import panel as pn
+import torch
 from omegaconf import OmegaConf
 from returns.curry import curry
 
 from .core import depandify, pandify
+
+
+def get_labels_str(*, ndims, loop_info, idx, column_names, active_dims):
+    loop_info["labels"] = 'inactive'
+    if loop_info["labels"] == 'inactive':
+        labels_str = ''
+        inactive_dims = [i for i in range(ndims - 1) if i not in active_dims]
+
+        for i in inactive_dims:
+            labels_str += f'{column_names[i]}: {idx[i+1]}\n'
+        # for i in inactive_dims:
+        #     labels_str += f'{column_names[i]} {idx[i]}\n'
+    else:
+        labels_str = loop_info["labels"][idx[0]]
+    return labels_str
+
+
+def extremes(t: Union[torch.Tensor, numpy.array, list]):
+    if isinstance(t, torch.Tensor):
+        return t.min().item(), t.max().item()
+    elif isinstance(t, numpy.ndarray):
+        return t.min(), t.max()
+    return min(t), max(t)
 
 
 def get_axes(slices):
@@ -15,7 +42,8 @@ def get_axes(slices):
 
 @curry
 def rules_one(*, opts_info, loop_info, data, column_names, idx, active_dim):
-    loop = {"label": loop_info["labels"][idx[0]]}
+    # loop = {"label": loop_info["labels"][idx[0]]}
+    loop = {"label": 'nope'}
 
     def hook(plot, element):
         opts_info.setdefault("yscale", {"args": [], "kwargs": {}})
@@ -30,15 +58,16 @@ def rules_one(*, opts_info, loop_info, data, column_names, idx, active_dim):
         slice(None) if dim == active_dim else idx[dim]
         for dim in range(data.ndim)
     ]
-    active_data_slice = data[tuple(fixed_indices)]
-    active_min, active_max = active_data_slice.min(), active_data_slice.max()
-    opts_info["ylim"] = opts_info.get("ylim", (active_min, active_max))
+    opts_info["ylim"] = opts_info.get("ylim", extremes(data))
+    if opts_info["ylim"] == "active":
+        active_data_slice = data[tuple(fixed_indices)]
+        opts_info["ylim"] = opts_info.get("ylim", extremes(active_data_slice))
     # opts = {
     #     "ylim": opts_info["ylim"],
     #     "hooks": opts_info["hooks"],
     #     "xlabel": column_names[active_dim],
     # }
-    opts = {"hooks": opts_info["hooks"]}
+    opts = {"hooks": opts_info["hooks"], "ylim": opts_info["ylim"]}
 
     return {"opts": opts, "loop": loop, "plot_type": hv.Curve}
 
@@ -48,7 +77,7 @@ def rules_two(
     *,
     opts_info,
     loop_info,
-    data,
+    data: torch.Tensor,
     column_names,
     idx,
     active_dims,
@@ -59,15 +88,23 @@ def rules_two(
     cmap,
 ):
     active_dims = active_dims[::-1] if transpose else active_dims
+
+    labels_str = get_labels_str(
+        ndims=data.ndim,
+        loop_info=loop_info,
+        idx=idx,
+        column_names=column_names,
+        active_dims=active_dims,
+    )
     loop = {
-        "label": loop_info["labels"][idx[0]],
+        "label": "nope",
         "kdims": kdims,
         # "xlabel": column_names[active_dims[0]],
         # "ylabel": column_names[active_dims[1]],
     }
     opts = {
         "cmap": cmap,
-        "clim": opts_info.get("clim", (data.min(), data.max())),
+        "clim": opts_info.get("clim", extremes(data)),
         "invert_xaxis": invert_xaxis,
         "invert_yaxis": invert_yaxis,
         "invert_axes": transpose,
@@ -168,14 +205,9 @@ def iplot_workhorse(*, data_frame, cols=1, rules):
     def update_slider_names(special_dim_0_value, special_dim_1_value):
         for dim_idx, slider in enumerate(sliders):
             if dim_idx == special_dim_0_value:
-                slider.name = (
-                    f"{index_names[dim_idx]} (IGNORE SLIDER -- Plot Axis 0)"
-                )
+                slider.name = f"{index_names[dim_idx]} (INACT 1+2D)"
             elif dim_idx == special_dim_1_value:
-                slider.name = (
-                    f"{index_names[dim_idx]} (IGNORE SLIDER in 2D MODE -- Plot"
-                    " Axis 1)"
-                )
+                slider.name = f"{index_names[dim_idx]} (INACT 2D)"
             else:
                 slider.name = f"{index_names[dim_idx]}"
 
@@ -202,7 +234,7 @@ def iplot_workhorse(*, data_frame, cols=1, rules):
     ):
         dim = 1 if dim == "1D" else 2
         if special_dim_0 == special_dim_1 and dim == 2:
-            print("NO CHANGE", flush=True)
+            # print("NO CHANGE", flush=True)
             return reactive_plot.last
         special_dims = [special_dim_0, special_dim_1]
         idx = [
@@ -266,11 +298,15 @@ def get_servable(d):
     )
 
     d.unsqueeze = d.get('unsqueeze', DotMap({}))
-    if d.unsqueeze.get('perform', False):
+    dummy_name = d.unsqueeze.get('column_name', 'DUMMY_VAR')
+    num_unsqueezes = max(
+        max(0, 3 - len(data.shape)), int(d.unsqueeze.get('perform', True))
+    )
+    for _ in range(num_unsqueezes):
         data = data.unsqueeze(0)
-        column_names = [
-            d.unsqueeze.get('column_name', 'ROOT_VAR')
-        ] + column_names
+        column_names = [dummy_name] + column_names
+    if len(column_names) == 0:
+        return None
     labels = [f"{column_names[0]} {i}" for i in range(data.shape[0])]
     one = rules_one(
         opts_info=d.one.get('opts_info', {}),
@@ -286,7 +322,7 @@ def get_servable(d):
         cols=d.get('cols', 2),
         rules={'one': one, 'two': two},
     )
-    return layout
+    return {'plot': layout, 'data': data}
 
 
 def get_cfg_servables(path):
