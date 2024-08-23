@@ -1,6 +1,8 @@
 import holoviews as hv
+import ipywidgets as widgets
 import matplotlib.pyplot as plt
 import panel as pn
+from omegaconf import OmegaConf
 from returns.curry import curry
 
 from .core import depandify, pandify
@@ -31,11 +33,12 @@ def rules_one(*, opts_info, loop_info, data, column_names, idx, active_dim):
     active_data_slice = data[tuple(fixed_indices)]
     active_min, active_max = active_data_slice.min(), active_data_slice.max()
     opts_info["ylim"] = opts_info.get("ylim", (active_min, active_max))
-    opts = {
-        "ylim": opts_info["ylim"],
-        "hooks": opts_info["hooks"],
-        "xlabel": column_names[active_dim],
-    }
+    # opts = {
+    #     "ylim": opts_info["ylim"],
+    #     "hooks": opts_info["hooks"],
+    #     "xlabel": column_names[active_dim],
+    # }
+    opts = {"hooks": opts_info["hooks"]}
 
     return {"opts": opts, "loop": loop, "plot_type": hv.Curve}
 
@@ -59,8 +62,8 @@ def rules_two(
     loop = {
         "label": loop_info["labels"][idx[0]],
         "kdims": kdims,
-        "xlabel": column_names[active_dims[0]],
-        "ylabel": column_names[active_dims[1]],
+        # "xlabel": column_names[active_dims[0]],
+        # "ylabel": column_names[active_dims[1]],
     }
     opts = {
         "cmap": cmap,
@@ -81,13 +84,14 @@ def plot_series(*, data, rules, merge, idx, kw):
         idx_lcl = tuple([i] + list(idx))
         r = rules(idx=idx_lcl, **kw)
         if r['plot_type'] == hv.Curve:
-            linestyles = ['solid', 'dashed', 'dashdot']
-            markers = ['*', 'o', '^', 's', 'p', 'h', 'H', 'D', 'd', 'P', 'X']
+            # linestyles = ['solid', 'dashed', 'dashdot']
+            # markers = ['*', 'o', '^', 's', 'p', 'h', 'H', 'D', 'd', 'P', 'X']
 
-            extras = {
-                'linestyle': linestyles[i] if i < 2 else 'dashed',
-                'marker': markers[i % len(markers)],
-            }
+            # extras = {
+            #     'linestyle': linestyles[i] if i < 2 else 'dashed',
+            #     'marker': markers[i % len(markers)],
+            # }
+            extras = {}
             r['opts'].update(extras)
         return r, idx_lcl
 
@@ -250,3 +254,68 @@ def iplot(*, data, column_names=None, cols, rules):
     else:
         data_frame = data
     return iplot_workhorse(data_frame=data_frame, cols=cols, rules=rules)
+
+
+def get_servable(d):
+    import torch
+    from dotmap import DotMap
+
+    data = torch.load(d.path)
+    column_names = d.get(
+        'column_names', [f'VAR {i+1}' for i in range(len(data.shape[1:]))]
+    )
+
+    d.unsqueeze = d.get('unsqueeze', DotMap({}))
+    if d.unsqueeze.get('perform', False):
+        data = data.unsqueeze(0)
+        column_names = [
+            d.unsqueeze.get('column_name', 'ROOT_VAR')
+        ] + column_names
+    labels = [f"{column_names[0]} {i}" for i in range(data.shape[0])]
+    one = rules_one(
+        opts_info=d.one.get('opts_info', {}),
+        loop_info={**{'labels': labels}, **d.one.get('loop_info', {})},
+    )
+    two = rules_two(
+        opts_info=d.two.get('opts_info', {'colorbar': True}),
+        loop_info={**{'labels': labels}, **d.two.get('loop_info', {})},
+    )
+    layout = iplot(
+        data=data,
+        column_names=column_names,
+        cols=d.get('cols', 2),
+        rules={'one': one, 'two': two},
+    )
+    return layout
+
+
+def get_cfg_servables(path):
+    from dotmap import DotMap
+
+    cfg = OmegaConf.load(path)
+    cfg = DotMap(OmegaConf.to_container(cfg, resolve=True))
+    return DotMap({k: get_servable(v) for k, v in cfg.items()})
+
+
+def display_nested_dict(d, parent_key=''):
+    items = []
+    subdicts = []
+    for k, v in d.items():
+        key = f"{parent_key}.{k}" if parent_key else k
+        if isinstance(v, dict):
+            # items.append(widgets.Accordion([display_nested_dict(v, key)], titles=(k,)))
+            subdicts.append((k, v))
+        else:
+            items.append(
+                widgets.HBox(
+                    [
+                        widgets.Label(value=f"{key}: "),
+                        widgets.Label(value=str(v)),
+                    ]
+                )
+            )
+    for k, v in subdicts:
+        items.append(
+            widgets.Accordion([display_nested_dict(v, k)], titles=(k,))
+        )
+    return widgets.VBox(items)
