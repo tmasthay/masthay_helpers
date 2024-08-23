@@ -12,7 +12,7 @@ from returns.curry import curry
 from .core import depandify, pandify
 
 
-def get_labels_str(*, ndims, loop_info, idx, column_names, active_dims):
+def get_labels_str(*, ndims, loop_info, idx, column_names, active_dims, base_title):
     loop_info["labels"] = 'inactive'
     if loop_info["labels"] == 'inactive':
         labels_str = ''
@@ -24,6 +24,7 @@ def get_labels_str(*, ndims, loop_info, idx, column_names, active_dims):
         #     labels_str += f'{column_names[i]} {idx[i]}\n'
     else:
         labels_str = loop_info["labels"][idx[0]]
+    labels_str = base_title + labels_str
     return labels_str
 
 
@@ -89,16 +90,27 @@ def rules_two(
 ):
     active_dims = active_dims[::-1] if transpose else active_dims
 
+    base_title = loop_info['base_title']
+    if not base_title.endswith('\n'):
+        base_title += '\n'
     labels_str = get_labels_str(
         ndims=data.ndim,
         loop_info=loop_info,
         idx=idx,
         column_names=column_names,
         active_dims=active_dims,
+        base_title=base_title
     )
+
+    bnd1 = loop_info["bounds"][active_dims[0]]
+    bnd2 = loop_info["bounds"][active_dims[1]]
+    bounds = (bnd1[0], bnd2[0], bnd1[1], bnd2[1])
+    if transpose:
+        bounds = (bnd2[0], bnd1[0], bnd2[1], bnd1[1])
     loop = {
-        "label": "nope",
+        "label": labels_str,
         "kdims": kdims,
+        "bounds": bounds
         # "xlabel": column_names[active_dims[0]],
         # "ylabel": column_names[active_dims[1]],
     }
@@ -282,6 +294,8 @@ def iplot_workhorse(*, data_frame, cols=1, rules):
 
 def iplot(*, data, column_names=None, cols, rules):
     if column_names is not None:
+        if len(column_names) == len(data.shape):
+            column_names = column_names[1:]
         data_frame = pandify(data, column_names)
     else:
         data_frame = data
@@ -323,12 +337,14 @@ def get_servable(d):
     return {'plot': layout, 'data': data}
 
 
-def get_cfg_servables(path):
+def get_cfg_servables(path, exclude=None):
     from dotmap import DotMap
 
     cfg = OmegaConf.load(path)
     cfg = DotMap(OmegaConf.to_container(cfg, resolve=True))
-    return DotMap({k: get_servable(v) for k, v in cfg.items()})
+    return DotMap(
+        {k: get_servable(v) for k, v in cfg.items() if k not in exclude}
+    )
 
 
 def display_nested_dict(d, parent_key=''):
