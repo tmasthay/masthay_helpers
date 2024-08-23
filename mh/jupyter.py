@@ -305,8 +305,6 @@ def get_servable(d):
     for _ in range(num_unsqueezes):
         data = data.unsqueeze(0)
         column_names = [dummy_name] + column_names
-    if len(column_names) == 0:
-        return None
     labels = [f"{column_names[0]} {i}" for i in range(data.shape[0])]
     one = rules_one(
         opts_info=d.one.get('opts_info', {}),
