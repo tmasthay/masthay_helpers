@@ -1,4 +1,5 @@
 import holoviews as hv
+import ipywidgets as widgets
 import matplotlib.pyplot as plt
 import panel as pn
 from omegaconf import OmegaConf
@@ -294,3 +295,27 @@ def get_cfg_servables(path):
     cfg = OmegaConf.load(path)
     cfg = DotMap(OmegaConf.to_container(cfg, resolve=True))
     return DotMap({k: get_servable(v) for k, v in cfg.items()})
+
+
+def display_nested_dict(d, parent_key=''):
+    items = []
+    subdicts = []
+    for k, v in d.items():
+        key = f"{parent_key}.{k}" if parent_key else k
+        if isinstance(v, dict):
+            # items.append(widgets.Accordion([display_nested_dict(v, key)], titles=(k,)))
+            subdicts.append((k, v))
+        else:
+            items.append(
+                widgets.HBox(
+                    [
+                        widgets.Label(value=f"{key}: "),
+                        widgets.Label(value=str(v)),
+                    ]
+                )
+            )
+    for k, v in subdicts:
+        items.append(
+            widgets.Accordion([display_nested_dict(v, k)], titles=(k,))
+        )
+    return widgets.VBox(items)
