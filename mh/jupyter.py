@@ -12,7 +12,9 @@ from returns.curry import curry
 from .core import depandify, pandify
 
 
-def get_labels_str(*, ndims, loop_info, idx, column_names, active_dims, base_title):
+def get_labels_str(
+    *, ndims, loop_info, idx, column_names, active_dims, base_title
+):
     loop_info["labels"] = 'inactive'
     if loop_info["labels"] == 'inactive':
         labels_str = ''
@@ -99,7 +101,7 @@ def rules_two(
         idx=idx,
         column_names=column_names,
         active_dims=active_dims,
-        base_title=base_title
+        base_title=base_title,
     )
 
     bnd1 = loop_info["bounds"][active_dims[0]]
@@ -110,8 +112,8 @@ def rules_two(
     loop = {
         "label": labels_str,
         "kdims": kdims,
-        "bounds": bounds
-        # "xlabel": column_names[active_dims[0]],
+        "bounds": bounds,
+        # "xlabel"': column_names[active_dims[0]],
         # "ylabel": column_names[active_dims[1]],
     }
     opts = {
@@ -306,7 +308,10 @@ def get_servable(d):
     import torch
     from dotmap import DotMap
 
-    data = torch.load(d.path)
+    if 'data' in d:
+        data = d.data
+    else:
+        data = torch.load(d.path)
     column_names = d.get(
         'column_names', [f'VAR {i+1}' for i in range(len(data.shape[1:]))]
     )
@@ -337,9 +342,36 @@ def get_servable(d):
     return {'plot': layout, 'data': data}
 
 
+def get_servable_from_data(
+    *,
+    data,
+    column_names=None,
+    unsqueeze=True,
+    unsqueeze_name='DUMMY_VAR',
+    one_opts=None,
+    one_loop=None,
+    two_opts=None,
+    two_loop=None,
+):
+    column_names = column_names or [
+        f'VAR {i+1}' for i in range(len(data.shape[1:]))
+    ]
+    num_unsqueezes = max(max(0, 3 - len(data.shape)), int(unsqueeze))
+    for _ in range(num_unsqueezes):
+        data = data.unsqueeze(0)
+        column_names = [unsqueeze_name] + column_names
+    labels = [f"{column_names[0]} {i}" for i in range(data.shape[0])]
+    one_opts = one_opts or {}
+    one_loop = {**{'labels': labels}, **(one_loop or {})}
+    # one = {'opts_info': one_opts, 'loop_info': one_loop}
+
+    two_opts = {**{'colorbar': True}, **(two_opts or {})}
+
+
 def get_cfg_servables(path, exclude=None):
     from dotmap import DotMap
 
+    exclude = exclude or []
     cfg = OmegaConf.load(path)
     cfg = DotMap(OmegaConf.to_container(cfg, resolve=True))
     return DotMap(
