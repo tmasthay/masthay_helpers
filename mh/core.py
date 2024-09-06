@@ -522,7 +522,9 @@ def pandify(data, column_names):
     if len(column_names) != len(data.shape) - 1:
         raise ValueError(
             f"column_names should have {len(data.shape) - 1} names, got"
-            f" {len(column_names)}"
+            f" {len(column_names)}\n"
+            f'{data.shape=}'
+            f'{column_names=}'
         )
 
     columns = pd.MultiIndex.from_product(
