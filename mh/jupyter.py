@@ -92,7 +92,7 @@ def rules_two(
 ):
     active_dims = active_dims[::-1] if transpose else active_dims
 
-    base_title = loop_info['base_title']
+    base_title = loop_info.get('base_title', '')
     if not base_title.endswith('\n'):
         base_title += '\n'
     labels_str = get_labels_str(
@@ -104,8 +104,12 @@ def rules_two(
         base_title=base_title,
     )
 
-    bnd1 = loop_info["bounds"][active_dims[0]]
-    bnd2 = loop_info["bounds"][active_dims[1]]
+    dummy_bounds = [0.0, 1.0, 0.0, 1.0]
+    dummy_bounds = [dummy_bounds for _ in range(data.ndim)]
+    bounds = loop_info.get("bounds", dummy_bounds)
+    # bounds = get_warn(loop_info, 'bounds', dummy_bounds)
+    bnd1 = bounds[active_dims[0]]
+    bnd2 = bounds[active_dims[1]]
     bounds = (bnd1[0], bnd2[0], bnd1[1], bnd2[1])
     if transpose:
         bounds = (bnd2[0], bnd1[0], bnd2[1], bnd1[1])
@@ -248,7 +252,6 @@ def iplot_workhorse(*, data_frame, cols=1, rules):
     ):
         dim = 1 if dim == "1D" else 2
         if special_dim_0 == special_dim_1 and dim == 2:
-            # print("NO CHANGE", flush=True)
             return reactive_plot.last
         special_dims = [special_dim_0, special_dim_1]
         idx = [
@@ -304,6 +307,13 @@ def iplot(*, data, column_names=None, cols, rules):
     return iplot_workhorse(data_frame=data_frame, cols=cols, rules=rules)
 
 
+def get_warn(d, key, default):
+    if key in d:
+        return d[key]
+    print(f"WARNING: {key} not found in {d}. Using default value {default}")
+    return default
+
+
 def get_servable(d):
     import torch
     from dotmap import DotMap
@@ -312,11 +322,13 @@ def get_servable(d):
         data = d.data
     else:
         data = torch.load(d.path)
-    column_names = d.get(
-        'column_names', [f'VAR {i+1}' for i in range(len(data.shape[1:]))]
+    column_names = get_warn(
+        d, 'column_names', [f'VAR {i+1}' for i in range(len(data.shape[1:]))]
     )
 
-    d.unsqueeze = d.get('unsqueeze', DotMap({}))
+    d.unsqueeze = get_warn(
+        d, 'unsqueeze', DotMap({'perform': False, 'column_name': 'DUMMY_VAR'})
+    )
     dummy_name = d.unsqueeze.get('column_name', 'DUMMY_VAR')
     num_unsqueezes = max(
         max(0, 3 - len(data.shape)), int(d.unsqueeze.get('perform', True))
@@ -336,7 +348,7 @@ def get_servable(d):
     layout = iplot(
         data=data,
         column_names=column_names,
-        cols=d.get('cols', 2),
+        cols=get_warn(d, 'cols', 2),
         rules={'one': one, 'two': two},
     )
     return {'plot': layout, 'data': data}
