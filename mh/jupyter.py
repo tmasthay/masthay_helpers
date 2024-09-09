@@ -46,7 +46,20 @@ def get_axes(slices):
 @curry
 def rules_one(*, opts_info, loop_info, data, column_names, idx, active_dim):
     # loop = {"label": loop_info["labels"][idx[0]]}
-    loop = {"label": 'nope'}
+    # loop = {"label": 'nope'}
+    base_title = loop_info.get('base_title', '')
+    if not base_title.endswith('\n'):
+        base_title += '\n'
+    labels_str = get_labels_str(
+        ndims=data.ndim,
+        loop_info=loop_info,
+        idx=idx,
+        column_names=column_names,
+        active_dims=[active_dim],
+        base_title=base_title,
+    )
+
+    loop = {**loop_info, 'label': labels_str}
 
     def hook(plot, element):
         opts_info.setdefault("yscale", {"args": [], "kwargs": {}})
@@ -72,7 +85,9 @@ def rules_one(*, opts_info, loop_info, data, column_names, idx, active_dim):
     # }
     opts = {"hooks": opts_info["hooks"], "ylim": opts_info["ylim"]}
 
-    return {"opts": opts, "loop": loop, "plot_type": hv.Curve}
+    exclude = ['labels', 'base_title']
+    loop_final = {k: v for k, v in loop.items() if k not in exclude}
+    return {"opts": opts, "loop": loop_final, "plot_type": hv.Curve}
 
 
 @curry
@@ -214,8 +229,9 @@ def iplot_workhorse(*, data_frame, cols=1, rules):
         end=len(sliders) - 1,
     )
 
+    colormaps = sorted([e for e in plt.colormaps() if not e.endswith("_r")])
     colormap_selector = pn.widgets.Select(
-        name='Colormap', options=plt.colormaps(), value='nipy_spectral'
+        name='Colormap', options=colormaps, value='seismic'
     )
 
     # Bind slider names to updated info
