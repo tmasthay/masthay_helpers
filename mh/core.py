@@ -510,7 +510,10 @@ def hydra_kw(*, use_cfg=False, protect_kw=True, transform_cfg=None):
 
 def hydra_out(name: str = '') -> str:
     out = hydra.core.hydra_config.HydraConfig.get().runtime.output_dir
-    return os.path.join(out, name)
+    s = os.path.join(out, name)
+    base_folder = os.path.dirname(s)
+    os.makedirs(base_folder, exist_ok=True)
+    return s
 
 
 def pandify(data, column_names):
@@ -523,8 +526,8 @@ def pandify(data, column_names):
         raise ValueError(
             f"column_names should have {len(data.shape) - 1} names, got"
             f" {len(column_names)}\n"
-            f'{data.shape=}'
-            f'{column_names=}'
+            f"{data.shape=}"
+            f"{column_names=}"
         )
 
     columns = pd.MultiIndex.from_product(

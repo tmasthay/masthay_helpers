@@ -105,7 +105,7 @@ def rules_two(
     invert_yaxis,
     cmap,
 ):
-    active_dims = active_dims[::-1] if transpose else active_dims
+    active_dims_lcl = active_dims[::-1] if transpose else active_dims
 
     base_title = loop_info.get('base_title', '')
     if not base_title.endswith('\n'):
@@ -115,7 +115,7 @@ def rules_two(
         loop_info=loop_info,
         idx=idx,
         column_names=column_names,
-        active_dims=active_dims,
+        active_dims=active_dims_lcl,
         base_title=base_title,
     )
 
@@ -123,17 +123,23 @@ def rules_two(
     dummy_bounds = [dummy_bounds for _ in range(data.ndim)]
     bounds = loop_info.get("bounds", dummy_bounds)
     # bounds = get_warn(loop_info, 'bounds', dummy_bounds)
-    bnd1 = bounds[active_dims[0]]
-    bnd2 = bounds[active_dims[1]]
+    try:
+        bnd1 = bounds[active_dims_lcl[0]]
+        bnd2 = bounds[active_dims_lcl[1]]
+    except IndexError as e:
+        print(f'{bounds=}, {active_dims_lcl=}, {e=}')
+        raise e
     bounds = (bnd1[0], bnd2[0], bnd1[1], bnd2[1])
     if transpose:
         bounds = (bnd2[0], bnd1[0], bnd2[1], bnd1[1])
+
+    # print(f'{bnd1=}, {bnd2=}, {bounds=}')
     loop = {
         "label": labels_str,
         "kdims": kdims,
         "bounds": bounds,
-        # "xlabel"': column_names[active_dims[0]],
-        # "ylabel": column_names[active_dims[1]],
+        # "xlabel"': column_names[active_dims_lcl[0]],
+        # "ylabel": column_names[active_dims_lcl[1]],
     }
     opts = {
         "cmap": cmap,
@@ -142,6 +148,8 @@ def rules_two(
         "invert_yaxis": invert_yaxis,
         "invert_axes": transpose,
         "colorbar": opts_info.get("colorbar", True),
+        "xaxis": opts_info.get("xaxis", "top"),
+        "yaxis": opts_info.get("yaxis", "left"),
     }
     return {"opts": opts, "loop": loop, "plot_type": hv.Image}
 
@@ -167,6 +175,8 @@ def plot_series(*, data, rules, merge, idx, kw):
 
     for i in range(data.shape[0]):
         r, idx_lcl = styles(i)
+        s = str(r["plot_type"])
+        # print(f'{r=}, {idx_lcl=}, {s=}')
         curr = r["plot_type"](data[idx_lcl], **r['loop']).opts(**r["opts"])
         runner.append(curr)
     return merge(runner)
@@ -201,10 +211,10 @@ def iplot_workhorse(*, data_frame, cols=1, rules):
 
     transpose_checkbox = pn.widgets.Checkbox(name="Transpose?", value=False)
     invert_x_checkbox = pn.widgets.Checkbox(
-        name="Invert Horizontal Axis?", value=False
+        name="Invert Horizontal Axis Data?", value=False
     )
     invert_y_checkbox = pn.widgets.Checkbox(
-        name="Invert Vertical Axis?", value=False
+        name="Invert Vertical Axis Data?", value=False
     )
 
     sliders = [
@@ -361,12 +371,16 @@ def get_servable(d):
         opts_info=d.two.get('opts_info', {'colorbar': True}),
         loop_info={**{'labels': labels}, **d.two.get('loop_info', {})},
     )
-    layout = iplot(
-        data=data,
-        column_names=column_names,
-        cols=get_warn(d, 'cols', 2),
-        rules={'one': one, 'two': two},
-    )
+    try:
+        layout = iplot(
+            data=data,
+            column_names=column_names,
+            cols=get_warn(d, 'cols', 2),
+            rules={'one': one, 'two': two},
+        )
+    except:
+        layout = None
+        print(f'WARNING: failed to create valid layout for interactive plot')
     return {'plot': layout, 'data': data}
 
 
@@ -402,9 +416,18 @@ def get_cfg_servables(path, exclude=None):
     exclude = exclude or []
     cfg = OmegaConf.load(path)
     cfg = DotMap(OmegaConf.to_container(cfg, resolve=True))
-    return DotMap(
-        {k: get_servable(v) for k, v in cfg.items() if k not in exclude}
-    )
+    d = {}
+    for k, v in cfg.items():
+        if k not in exclude:
+            try:
+                d[k] = get_servable(v)
+            except:
+                print(
+                    'WARNING: Failed to create interactive plot for'
+                    f' {k}...setting to None'
+                )
+                d[k] = None
+    return DotMap(d)
 
 
 def display_nested_dict(d, parent_key=''):
