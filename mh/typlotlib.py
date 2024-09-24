@@ -172,18 +172,25 @@ def get_frames_bool(
     *,
     data: ArrayLike,
     iter: PlotTypes.Indices,
-    fig: Figure,
-    axes: List[Axes],
     plotter: PlotTypes.PlotHandler,
     framer: PlotTypes.PlotHandler = None,
+    fig: Figure = None,
+    axes: List[Axes] = None,
     **kw,
 ):
     frames = []
 
-    from time import time
-
     print('Plotting frames...', flush=True, end='')
     start_time = time()
+
+    if (fig is None) ^ (axes is None):
+        raise ValueError(
+            'Either both fig and axes must be None or both must be not'
+            f' None...got {(fig is None)=} and {(axes is None)=}'
+        )
+    elif fig is None:
+        fig, axes = plt.subplots(1, 1, figsize=(10, 10))
+
     if framer is None:
 
         def default_frame_handler(*, data, idx, fig, axes, **kw2):
@@ -340,8 +347,12 @@ def make_gifs(
             plt.savefig(os.path.join(out_dir, f'{k}.jpg'))
             plt.clf()
         else:
-            plot_tensor2d_fast(
-                **v, config=config(labels=v['labels']), name=k, **kw
+            # plot_tensor2d_fast(
+            #     **v, config=config(labels=v['labels']), name=k, **kw
+            # )
+            raise NotImplementedError(
+                'plot_tensor2d_fast has been deprecated...look through git'
+                ' history to find if you really need it.'
             )
         print('DONE')
 
@@ -360,6 +371,8 @@ def apply_subplot_legacy(
     xlim=None,
     ylim=None,
 ):
+    import torch  # noqa: E402
+
     curr_subplot = sub.order[i_subplot - 1]
     plt.subplot(*sub.shape, curr_subplot)
     specs = sub.plts[curr_subplot - 1]
