@@ -2,6 +2,7 @@ import copy
 import glob
 import io
 import os
+from copy import deepcopy
 from itertools import product
 from time import time
 from typing import Any, Callable, Iterator, List, Union
@@ -202,7 +203,7 @@ def get_frames_bool(
 
         frame_handler = default_frame_handler
 
-    curr_kw = kw
+    curr_kw = deepcopy(kw)
     for idx, plot_frame in iter:
         # iter_time = time()
         curr_kw = plotter(data=data, idx=idx, fig=fig, axes=axes, **curr_kw)
@@ -222,9 +223,32 @@ def get_frames_bool(
     return frames
 
 
+def count_frames(gif_path):
+    with Image.open(gif_path) as img:
+        frame_count = 0
+        try:
+            while True:
+                img.seek(frame_count)  # Move to the next frame
+                frame_count += 1
+        except EOFError:
+            # End of sequence: no more frames
+            pass
+        return frame_count
+
+
 def save_frames(
-    frames, *, path, movie_format='gif', duration=100, verbose=False, loop=0
+    frames,
+    *,
+    path,
+    movie_format='gif',
+    duration=100,
+    verbose=False,
+    loop=0,
+    verify_frame_count=False,
 ):
+    target_frame_count = len(frames)
+    if len(frames) == 0:
+        raise ValueError("No frames to save.")
     dir, name = os.path.split(os.path.abspath(path))
     os.makedirs(dir, exist_ok=True)
     name = name.replace(f".{movie_format}", "")
@@ -243,6 +267,15 @@ def save_frames(
         save_all=True,
         **kw,
     )
+
+    if verify_frame_count:
+        plot_name = plot_name.replace(f'.{movie_format}', '')
+        final_name = f'{plot_name}.{movie_format}'
+        true_count = count_frames(final_name)
+        if true_count != target_frame_count:
+            raise ValueError(
+                f'Frame count mismatch: {true_count=}, {target_frame_count=}'
+            )
 
 
 def slice_iter(*, dims, shape=None, arr=None, enum=True):
