@@ -2,6 +2,7 @@ import copy
 import glob
 import io
 import os
+import warnings
 from copy import deepcopy
 from itertools import product
 from time import time
@@ -273,8 +274,14 @@ def save_frames(
         final_name = f'{plot_name}.{movie_format}'
         true_count = count_frames(final_name)
         if true_count != target_frame_count:
-            raise ValueError(
-                f'Frame count mismatch: {true_count=}, {target_frame_count=}'
+            # raise warning
+            warnings.warn(
+                f'Frame count mismatch: {true_count=},'
+                f' {target_frame_count=}'
+                '\nThis may be due to redundant frames'
+                ' being compressed. If you believe this is a bug, please'
+                ' report an issue on GitHub.',
+                UserWarning,
             )
 
 

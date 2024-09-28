@@ -13,7 +13,7 @@ from hydra import compose, initialize
 from omegaconf import OmegaConf
 
 
-def dict_dump(d):
+def dict_dump(d, max_length=160):
     def sdict(input_dict):
         """
         Recursively convert all values in the dictionary to strings, ensuring proper serialization without
@@ -24,7 +24,12 @@ def dict_dump(d):
         elif isinstance(input_dict, list):
             return [sdict(element) for element in input_dict]
         else:
-            return str(input_dict)
+            if type(input_dict) in [int, float, bool]:
+                return input_dict
+            s = str(input_dict)
+            if len(s) > max_length:
+                s = s[:max_length] + '...'
+            return s
 
     return yaml.dump(sdict(d))
 
@@ -162,6 +167,9 @@ class DotDict:
                     if self_key in v or 'eval(' in v:
                         return True
         return False
+
+    def pretty_str(self, max_length=160):
+        return dict_dump(self, max_length=max_length)
 
     def self_ref_resolve(
         self, *, self_key='self', max_passes=5, gbl=None, lcl=None, relax=False
