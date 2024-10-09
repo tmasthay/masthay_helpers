@@ -117,7 +117,8 @@ class DotDict:
         self.__dict__.update(DotDict.get_dict(d))
 
     def str(self):
-        return str(self.__dict__)
+        # return str(self.__dict__)
+        return self.pretty_str()
 
     def dict(self):
         return {
@@ -425,7 +426,9 @@ def easy_cfg(
     return OmegaConf.to_container(cfg, resolve=True)
 
 
-def exec_imports(d: DotDict, *, root=None, delim='|', import_key='^^'):
+def exec_imports(
+    d: DotDict, *, root=None, delim='|', import_key='^^', ignore_spaces=True
+):
     q = [('', d)]
     root = os.getcwd() if root is None else root
     while q:
@@ -433,12 +436,15 @@ def exec_imports(d: DotDict, *, root=None, delim='|', import_key='^^'):
         for k, v in curr.items():
             if isinstance(v, DotDict) or isinstance(v, dict):
                 q.append((f'{prefix}.{k}' if prefix else k, v))
-            elif isinstance(v, str) and v.startswith(import_key):
-                lcl_root = os.path.join(root, *prefix.split('.'))
-                full_key = f'{prefix}.{k}' if prefix else k
-                d[full_key] = cfg_import(
-                    v[len(import_key) :], root=lcl_root, delim=delim
-                )
+            elif isinstance(v, str):
+                if ignore_spaces:
+                    v = v.replace(' ', '').replace('\t', '')
+                if v.startswith(import_key) and delim in v:
+                    lcl_root = os.path.join(root, *prefix.split('.'))
+                    full_key = f'{prefix}.{k}' if prefix else k
+                    d[full_key] = cfg_import(
+                        v[len(import_key) :], root=lcl_root, delim=delim
+                    )
 
     return d
 
