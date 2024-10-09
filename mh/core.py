@@ -118,7 +118,8 @@ class DotDict:
 
     def str(self):
         # return str(self.__dict__)
-        return self.pretty_str()
+        # return self.pretty_str()
+        return str(self.dict())
 
     def dict(self):
         return {
