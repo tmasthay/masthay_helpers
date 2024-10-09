@@ -5,12 +5,13 @@ import os
 import random
 import sys
 from functools import wraps
-from typing import get_type_hints
+from typing import Iterable, get_type_hints
 
 import hydra
 import yaml
 from hydra import compose, initialize
 from omegaconf import OmegaConf
+from typing import Any
 
 
 def dict_dump(d, max_length=160):
@@ -33,7 +34,22 @@ def dict_dump(d, max_length=160):
 
     return yaml.dump(sdict(d))
 
+def like_dict(obj: Any) -> bool:
+    required_methods = ['keys', 'items', 'get']
+    return all(hasattr(obj, method) for method in required_methods)
 
+def like_list(obj: Any) -> bool:
+    required_methods = ['__getitem__', '__setitem__', '__len__', 'append', 'extend', 'pop']
+    return all(hasattr(obj, method) for method in required_methods)
+
+def gen_items(obj: Any) -> Iterable:
+    if like_dict(obj):
+        return obj.items()
+    elif like_list(obj):
+        return enumerate(obj)
+    else:
+        raise ValueError(f'Object {obj} is neither a list nor a dictionary')
+    
 class DotDict:
     def __init__(self, d=None, self_ref_resolve=False, deep=False):
         if d is None:
@@ -160,14 +176,20 @@ class DotDict:
         q = [d]
         while q:
             d = q.pop()
-            for k, v in d.items():
-                if isinstance(v, DotDict):
-                    q.append(v)
-                elif isinstance(v, dict):
-                    q.append(v)
-                elif isinstance(v, str):
-                    if self_key in v or 'eval(' in v:
-                        return True
+            if like_dict(d):
+                for k, v in d.items():
+                    if like_dict(v) or like_list(v):
+                        q.append(v)
+                    elif isinstance(v, str):
+                        if self_key in v or 'eval(' in v:
+                            return True
+            elif like_list(d):
+                for e in d:
+                    if like_dict(e) or like_list(e):
+                        q.append(e)
+                    elif isinstance(e, str):
+                        if self_key in e or 'eval(' in e:
+                            return True
         return False
 
     def pretty_str(self, max_length=160):
@@ -186,10 +208,8 @@ class DotDict:
             q = [d]
             while q:
                 d = q.pop()
-                for k, v in d.items():
-                    # if self_key != 'self':
-                    #     input(f'{k}: {v}')
-                    if isinstance(v, DotDict):
+                for k, v in gen_items(d):
+                    if isinstance(v, DotDict) or like_list(v):
                         q.append(v)
                     elif isinstance(v, dict):
                         d[k] = DotDict(v)
@@ -218,7 +238,9 @@ class DotDict:
                                 f'Error evaluating {v} of type {type(v)}\n{msg}'
                             )
                             raise RuntimeError(final_msg)
+                        
             passes += 1
+            
         if passes == max_passes:
             msg = f"Max passes ({max_passes}) reached. self_ref_resolve failed."
             if not relax:
