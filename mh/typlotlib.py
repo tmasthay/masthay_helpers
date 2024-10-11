@@ -23,6 +23,101 @@ pre_colors = list(mcolors.CSS4_COLORS.keys())
 pre_colors_dict = mcolors.CSS4_COLORS
 
 
+def bool_slice(
+    *args,
+    permute=None,
+    none_dims=(),
+    ctrl=None,
+    strides=None,
+    start=None,
+    cut=None,
+    verbose=False,
+):
+    """
+    Generate boolean slices based on the given arguments.
+
+    Args:
+        *args: Variable length arguments representing the dimensions of the boolean slices.
+        permute (list): A list specifying the order in which the dimensions should be permuted.
+        none_dims (tuple): A tuple containing the indices of dimensions that should be treated as None.
+        ctrl (function): A function that takes in the indices and arguments and returns a boolean value.
+        strides (list): A list specifying the strides for each dimension.
+        start (list): A list specifying the starting indices for each dimension.
+        cut (list): A list specifying the cut values for each dimension.
+        verbose (bool): A boolean value indicating whether to print verbose output.
+
+    Yields:
+        tuple: A tuple containing the boolean slice indices and the result of the control function.
+
+    """
+    permute = list(permute or range(len(args)))
+    permute.reverse()
+
+    # Logic is not correct here for strides, start, cut, etc. TODO: Fix
+    strides = strides or [1 for _ in range(len(args))]
+    start = start or [0 for _ in range(len(args))]
+    cut = cut or [0 for _ in range(len(args))]
+    tmp = list(args)
+    for i in range(len(strides)):
+        if i not in none_dims:
+            tmp[i] = (tmp[i] - start[i] - cut[i]) // strides[i]
+
+    args = list(args)
+    none_dims = [i if i >= 0 else len(args) + i for i in none_dims]
+    for i in range(len(args)):
+        if i not in none_dims:
+            args[i] = args[i] - cut[i]
+    # Total number of combinations
+    total_combinations = np.prod(
+        [e for i, e in enumerate(tmp) if i not in none_dims]
+    )
+
+    # Initialize indices
+    idx = [
+        slice(None) if i in none_dims else start[i] for i in range(len(args))
+    ]
+
+    if ctrl is None:
+
+        def ctrl_default(*args):
+            return True
+
+        ctrl = ctrl_default
+
+    for combo in range(total_combinations):
+        res = tuple([tuple(idx)]) + (ctrl(idx, args),)
+        if verbose:
+            print(f'bool_slice: {combo} -> {res}')
+        yield res
+
+        # Update indices
+        for i in permute:
+            if i in none_dims:
+                continue
+            idx[i] += strides[i]
+            if idx[i] < args[i]:
+                break
+            idx[i] = start[i]
+
+
+def clean_idx(idx, show_colons=True):
+    """
+    Cleans up the given index by converting it to a string representation.
+
+    Args:
+        idx (list): The index to clean up.
+        show_colons (bool, optional): Whether to include colons in the string representation.
+            Defaults to True.
+
+    Returns:
+        str: The cleaned up string representation of the index.
+    """
+    res = [str(e) if e != slice(None) else ':' for e in idx]
+    if not show_colons:
+        res = [e for e in res if e != ':']
+    return f'({", ".join(res)})'
+
+
 class PlotTypes:
     Index = Union[int, List[int]]
     Indices = Union[Iterator[Index], List[Index]]

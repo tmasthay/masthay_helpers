@@ -5,13 +5,12 @@ import os
 import random
 import sys
 from functools import wraps
-from typing import Iterable, get_type_hints
+from typing import Any, Iterable, get_type_hints
 
 import hydra
 import yaml
 from hydra import compose, initialize
 from omegaconf import OmegaConf
-from typing import Any
 
 
 def dict_dump(d, max_length=160):
@@ -34,13 +33,23 @@ def dict_dump(d, max_length=160):
 
     return yaml.dump(sdict(d))
 
+
 def like_dict(obj: Any) -> bool:
     required_methods = ['keys', 'items', 'get']
     return all(hasattr(obj, method) for method in required_methods)
 
+
 def like_list(obj: Any) -> bool:
-    required_methods = ['__getitem__', '__setitem__', '__len__', 'append', 'extend', 'pop']
+    required_methods = [
+        '__getitem__',
+        '__setitem__',
+        '__len__',
+        'append',
+        'extend',
+        'pop',
+    ]
     return all(hasattr(obj, method) for method in required_methods)
+
 
 def gen_items(obj: Any) -> Iterable:
     if like_dict(obj):
@@ -49,7 +58,8 @@ def gen_items(obj: Any) -> Iterable:
         return enumerate(obj)
     else:
         raise ValueError(f'Object {obj} is neither a list nor a dictionary')
-    
+
+
 class DotDict:
     def __init__(self, d=None, self_ref_resolve=False, deep=False):
         if d is None:
@@ -130,18 +140,23 @@ class DotDict:
         return self.__dict__.values()
 
     def update(self, d):
-        self.__dict__.update(DotDict.get_dict(d))
+        self.__dict__.update(DotDict(d).dict())
 
     def str(self):
         # return str(self.__dict__)
-        # return self.pretty_str()
-        return str(self.dict())
+        return self.pretty_str()
+        # return str(self.dict())
 
     def dict(self):
-        return {
-            k: v if not isinstance(v, DotDict) else v.dict()
-            for k, v in self.items()
-        }
+        tmp = {}
+        for k, v in self.items():
+            if isinstance(v, DotDict):
+                tmp[k] = v.dict()
+            elif like_list(v):
+                tmp[k] = [e.dict() if isinstance(e, DotDict) else e for e in v]
+            else:
+                tmp[k] = v
+        return tmp
 
     def __str__(self):
         return self.str()
@@ -217,7 +232,9 @@ class DotDict:
                     elif isinstance(v, str):
                         try:
                             if 'eval(' in v:
-                                d[k] = eval(v[5:-1], gbl, lcl)
+                                d[k] = eval(
+                                    v[5:-1].replace(self_key, 'self'), gbl, lcl
+                                )
                             elif v.startswith(f'{self_key}.'):
                                 d[k] = eval(
                                     v.replace(self_key, 'self'), gbl, lcl
@@ -238,9 +255,9 @@ class DotDict:
                                 f'Error evaluating {v} of type {type(v)}\n{msg}'
                             )
                             raise RuntimeError(final_msg)
-                        
+
             passes += 1
-            
+
         if passes == max_passes:
             msg = f"Max passes ({max_passes}) reached. self_ref_resolve failed."
             if not relax:
@@ -756,7 +773,8 @@ def torch_stats(report=None, black_pipable=True):
                 stats['RMS'] = torch.sqrt(torch.mean(y**2)).item()
             if 'L2' in report:
                 stats['L2'] = torch.norm(y).item()
-            return str(stats)
+            # return str(stats)
+            return yaml.dump(stats)
 
     except ModuleNotFoundError as e:
         msg = f'{e}\nIn order to use torch_stats, you need to install torch'
