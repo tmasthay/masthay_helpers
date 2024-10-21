@@ -236,9 +236,11 @@ class DotDict:
                                     v[5:-1].replace(self_key, 'self'), gbl, lcl
                                 )
                             elif v.startswith(f'{self_key}.'):
+                                # input(f'Attempting eval of {v=}')
                                 d[k] = eval(
                                     v.replace(self_key, 'self'), gbl, lcl
                                 )
+                                # input('SUCCESSS')
 
                         except AttributeError:
                             msg = (
@@ -249,7 +251,7 @@ class DotDict:
                                 raise AttributeError(msg)
                             else:
                                 UserWarning(msg)
-                        except TypeError as e:
+                        except Exception as e:
                             msg = str(e)
                             final_msg = (
                                 f'Error evaluating {v} of type {type(v)}\n{msg}'
@@ -259,7 +261,7 @@ class DotDict:
             passes += 1
 
         if passes == max_passes:
-            msg = f"Max passes ({max_passes}) reached. self_ref_resolve failed."
+            msg = f"Max passes ({max_passes}) reached. self_ref_resolve failed. Debug info below.\n{self.get_self_ref_subdict(self_key=self_key)=}"
             if not relax:
                 raise ValueError(msg)
             else:
@@ -270,6 +272,50 @@ class DotDict:
                 UserWarning(f'{msg}...{further_msg}')
         return self
 
+    def get_self_ref_keys(self, *, self_key='self'):
+        d = self.__dict__
+        q = [('root', d)]
+        keys = []
+        while q:
+            base_key, d = q.pop()
+            for k, v in gen_items(d):
+                if isinstance(v, DotDict) or like_list(v):
+                    q.append((f'{base_key}.{k}', v))
+                elif isinstance(v, dict):
+                    q.append((f'{base_key}.{k}', DotDict(v)))
+                elif isinstance(v, str):
+                    if self_key in v:
+                        keys.append(f'{base_key}.{k}')
+        return keys
+    
+    def get_self_ref_subdict(self, *, self_key='self'):
+        def get_key(a,b):
+            return f'{a}.{b}' if a else b
+        
+        q = [('', self)]
+        final = {}
+        while q:
+            prefix, curr = q.pop(0)
+            for k, v in gen_items(curr):
+                K = get_key(prefix, k)
+                if isinstance(v, DotDict) or like_list(v):
+                    q.append((K, v))
+                elif isinstance(v, dict):
+                    q.append((K, DotDict(v)))
+                elif isinstance(v, str):
+                    if self_key in v:
+                        final[K] = v
+        
+        eval_final = {}
+        for k, v in final.items():
+            try:
+                final[k] = 'eval(' + v.replace(self_key, 'self') + ')'
+                eval_final[k] = eval(final[k], globals(), locals())
+            except Exception as e:
+                eval_final[k] = e
+        return final, eval_final
+                        
+    
     def filter(self, exclude=None, include=None, relax=False):
         keys = set(self.keys())
         exclude = set() if exclude is None else set(exclude)
