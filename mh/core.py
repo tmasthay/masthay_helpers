@@ -528,9 +528,13 @@ def exec_imports(
                 if v.startswith(import_key) and delim in v:
                     lcl_root = os.path.join(root, *prefix.split('.'))
                     full_key = f'{prefix}.{k}' if prefix else k
-                    d[full_key] = cfg_import(
-                        v[len(import_key) :], root=lcl_root, delim=delim
-                    )
+                    try:
+                        d[full_key] = cfg_import(
+                            v[len(import_key) :], root=lcl_root, delim=delim
+                        )
+                    except Exception as e:
+                        msg = f'Error importing {v} at {full_key}\n{e}'
+                        raise ImportError(msg)
 
     return d
 
