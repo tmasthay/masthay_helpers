@@ -112,6 +112,9 @@ class DotDict:
 
     def __getitem__(self, k):
         return self.deep_get(k)
+    
+    # def __getattr__(self, k):
+    #     return self.deep_get(k)
 
     def __setattr__(self, k, v):
         if isinstance(v, dict):
@@ -169,8 +172,17 @@ class DotDict:
         if type(k) != str:
             return d[k]
         keys = k.split('.')
-        for key in keys:
+        for i,key in enumerate(keys):
             d = d[key]
+            # try:    
+            # except KeyError as e:
+            #     partial_key = '.'.join(keys[:(i+1)])
+            #     msg = (
+            #         f'KeyError {e} found\n\n'
+            #         f'Error getting {k}@{partial_key} from DotDict with keys below\n\n'
+            #         f'{DotDict.indent_keys(self.flat_keys())}'
+            #     )
+            #     raise AttributeError(msg)
         return d
 
     def deep_set(self, k, v):
@@ -338,6 +350,44 @@ class DotDict:
                 {k: self.get(k, None) for k in include.difference(exclude)}
             )
 
+    def flat_keys(self, sort_by_depth=True):
+        q = [(self, "")]  # Queue with (current_dict, current_prefix)
+        keys = []
+
+        while q:
+            curr, prefix = q.pop(0)  # Dequeue from the front for BFS
+            for k, v in curr.items():
+                new_key = f"{prefix}.{k}" if prefix else k
+                keys.append(new_key)
+                if DotDict.is_like_dict(v):
+                    q.append((v, new_key))  # Enqueue the nested dictionary with updated prefix
+        if sort_by_depth:
+            keys.sort(key=lambda x: (x.count('.'), x))  
+    
+        return keys
+    
+    def validate_keys(self, keys: list[str]) -> list[str]:
+        flattened_keys = self.flat_keys()
+        invalid_keys = [k for k in keys if k not in flattened_keys]
+        return invalid_keys
+    
+    def assert_keys_present(self, keys: list[str]) -> None:
+        invalid_keys = self.validate_keys(keys)
+        if invalid_keys:
+            expected = DotDict.indent_keys(keys)
+            invalid = DotDict.indent_keys(invalid_keys)
+            flat_keys = DotDict.indent_keys(self.flat_keys())
+            raise ValueError(f"Expected keys below:\n{expected}\n\nInvalid keys:\n{invalid}\n\nFlat keys:\n{flat_keys}")
+        
+    @staticmethod
+    def indent_keys(tokens, level=1, indent_str='    ', sep='\n'):
+        indenter = sep + indent_str * level
+        return indenter + indenter.join(tokens)
+    
+    @staticmethod
+    def is_like_dict(obj: Any) -> bool:
+        return isinstance(obj, dict) or isinstance(obj, DotDict)
+        
 
 class DotDictImmutable(DotDict):
     def __reject__(self, *args, **kwargs):
