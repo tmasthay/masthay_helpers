@@ -62,28 +62,30 @@ def gen_items(obj: Any) -> Iterable:
 
 class DotDict:
     def __init__(self, d=None, self_ref_resolve=False, deep=False):
+        if isinstance(d, DotDict):
+            self.__init__(
+                d.dict(), self_ref_resolve=self_ref_resolve, deep=deep
+            )
+            return
         if d is None:
             d = {}
         if deep:
             D = copy.deepcopy(d)
         else:
             D = d
-        if type(d) is DotDict:
-            self.__dict__.update(d.__dict__)
-        else:
-            for k, v in D.items():
-                if type(v) is dict:
-                    D[k] = DotDict(v, self_ref_resolve=False)
-                elif type(v) is list:
-                    D[k] = [
-                        (
-                            DotDict(e, self_ref_resolve=False)
-                            if type(e) is dict
-                            else e
-                        )
-                        for e in v
-                    ]
-            self.__dict__.update(D)
+        for k, v in D.items():
+            if type(v) is dict:
+                D[k] = DotDict(v, self_ref_resolve=False)
+            elif type(v) is list:
+                D[k] = [
+                    (
+                        DotDict(e, self_ref_resolve=False)
+                        if type(e) is dict
+                        else e
+                    )
+                    for e in v
+                ]
+        self.__dict__.update(D)
         if self_ref_resolve:
             self.self_ref_resolve()
 
@@ -112,7 +114,7 @@ class DotDict:
 
     def __getitem__(self, k):
         return self.deep_get(k)
-    
+
     # def __getattr__(self, k):
     #     return self.deep_get(k)
 
@@ -172,9 +174,9 @@ class DotDict:
         if type(k) != str:
             return d[k]
         keys = k.split('.')
-        for i,key in enumerate(keys):
+        for i, key in enumerate(keys):
             d = d[key]
-            # try:    
+            # try:
             # except KeyError as e:
             #     partial_key = '.'.join(keys[:(i+1)])
             #     msg = (
@@ -273,7 +275,11 @@ class DotDict:
             passes += 1
 
         if passes == max_passes:
-            msg = f"Max passes ({max_passes}) reached. self_ref_resolve failed. Debug info below.\n{self.get_self_ref_subdict(self_key=self_key)=}"
+            msg = (
+                f"Max passes ({max_passes}) reached. self_ref_resolve failed."
+                " Debug info"
+                f" below.\n{self.get_self_ref_subdict(self_key=self_key)=}"
+            )
             if not relax:
                 raise ValueError(msg)
             else:
@@ -299,11 +305,11 @@ class DotDict:
                     if self_key in v:
                         keys.append(f'{base_key}.{k}')
         return keys
-    
+
     def get_self_ref_subdict(self, *, self_key='self'):
-        def get_key(a,b):
+        def get_key(a, b):
             return f'{a}.{b}' if a else b
-        
+
         q = [('', self)]
         final = {}
         while q:
@@ -317,7 +323,7 @@ class DotDict:
                 elif isinstance(v, str):
                     if self_key in v:
                         final[K] = v
-        
+
         eval_final = {}
         for k, v in final.items():
             try:
@@ -326,8 +332,7 @@ class DotDict:
             except Exception as e:
                 eval_final[k] = e
         return final, eval_final
-                        
-    
+
     def filter(self, exclude=None, include=None, relax=False):
         keys = set(self.keys())
         exclude = set() if exclude is None else set(exclude)
@@ -360,36 +365,69 @@ class DotDict:
                 new_key = f"{prefix}.{k}" if prefix else k
                 keys.append(new_key)
                 if DotDict.is_like_dict(v):
-                    q.append((v, new_key))  # Enqueue the nested dictionary with updated prefix
+                    q.append(
+                        (v, new_key)
+                    )  # Enqueue the nested dictionary with updated prefix
         if sort_by_depth:
-            keys.sort(key=lambda x: (x.count('.'), x))  
-    
+            keys.sort(key=lambda x: (x.count('.'), x))
+
         return keys
-    
+
     def validate_keys(self, keys: list[str]) -> list[str]:
         flattened_keys = self.flat_keys()
         invalid_keys = [k for k in keys if k not in flattened_keys]
         return invalid_keys
-    
+
     def assert_keys_present(self, keys: list[str]) -> None:
         invalid_keys = self.validate_keys(keys)
         if invalid_keys:
             expected = DotDict.indent_keys(keys)
             invalid = DotDict.indent_keys(invalid_keys)
             flat_keys = DotDict.indent_keys(self.flat_keys())
-            raise ValueError(f"Expected keys below:\n{expected}\n\nInvalid keys:\n{invalid}\n\nFlat keys:\n{flat_keys}")
-        
+            raise ValueError(
+                f"Expected keys below:\n{expected}\n\nInvalid"
+                f" keys:\n{invalid}\n\nFlat keys:\n{flat_keys}"
+            )
+
     @staticmethod
     def indent_keys(tokens, level=1, indent_str='    ', sep='\n'):
         indenter = sep + indent_str * level
         return indenter + indenter.join(tokens)
-    
+
     @staticmethod
     def is_like_dict(obj: Any) -> bool:
         return isinstance(obj, dict) or isinstance(obj, DotDict)
-        
+
 
 class DotDictImmutable(DotDict):
+    def __init__(self, d=None, self_ref_resolve=False, deep=False):
+        if isinstance(d, DotDict):
+            self.__init__(
+                d.dict(), self_ref_resolve=self_ref_resolve, deep=deep
+            )
+            return
+        if d is None:
+            d = {}
+        if deep:
+            D = copy.deepcopy(d)
+        else:
+            D = d
+        for k, v in D.items():
+            if type(v) is dict:
+                D[k] = DotDictImmutable(v, self_ref_resolve=False)
+            elif type(v) is list:
+                D[k] = [
+                    (
+                        DotDictImmutable(e, self_ref_resolve=False)
+                        if type(e) is dict
+                        else e
+                    )
+                    for e in v
+                ]
+        self.__dict__.update(D)
+        if self_ref_resolve:
+            self.self_ref_resolve()
+
     def __reject__(self, *args, **kwargs):
         raise AttributeError(
             "DotDictImmutable is immutable. Use DotDict instead if you intend"
