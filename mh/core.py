@@ -258,9 +258,23 @@ class DotDict:
 
                         except AttributeError:
                             msg = (
-                                f"Could not resolve self reference for {k}={v}"
-                                f"\ngiven below\n\n{self}"
+                                f"{self}"
+                                f"Could not resolve self reference for {k}={v}, full self above"
                             )
+                            subkeys = v.split('.')
+                            debug_res = []
+                            sub_msg = ''
+                            for i in range(len(subkeys)):
+                                subkey = '.'.join(subkeys[:i + 1])
+                                try: 
+                                    tmp = eval(subkey, gbl, lcl)
+                                    sub_msg += f'{subkey} -> {tmp}'
+                                except Exception as e:
+                                    sub_msg += f'{subkey} -> {e}'
+                                sub_msg += '\n'
+                            msg += f"\nAttempted debug info with subkey resolution below\n{sub_msg}"
+                                    
+                                
                             if not relax:
                                 raise AttributeError(msg)
                             else:
