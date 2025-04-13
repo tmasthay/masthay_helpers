@@ -258,23 +258,25 @@ class DotDict:
 
                         except AttributeError:
                             msg = (
-                                f"{self}"
-                                f"Could not resolve self reference for {k}={v}, full self above"
+                                f"{self}Could not resolve self reference for"
+                                f" {k}={v}, full self above"
                             )
                             subkeys = v.split('.')
                             debug_res = []
                             sub_msg = ''
                             for i in range(len(subkeys)):
-                                subkey = '.'.join(subkeys[:i + 1])
-                                try: 
+                                subkey = '.'.join(subkeys[: i + 1])
+                                try:
                                     tmp = eval(subkey, gbl, lcl)
                                     sub_msg += f'{subkey} -> {tmp}'
                                 except Exception as e:
                                     sub_msg += f'{subkey} -> {e}'
                                 sub_msg += '\n'
-                            msg += f"\nAttempted debug info with subkey resolution below\n{sub_msg}"
-                                    
-                                
+                            msg += (
+                                "\nAttempted debug info with subkey resolution"
+                                f" below\n{sub_msg}"
+                            )
+
                             if not relax:
                                 raise AttributeError(msg)
                             else:
@@ -502,6 +504,45 @@ def cfg_import(s, *, root=None, delim='|'):
     return dyn_import(path=path, mod=mod, func=func)
 
 
+def cfg_import_constrained(
+    s, *, key_path, config_path, delim="^", namespace_key="namespace"
+):
+    assert s.startswith(
+        delim
+    ), f's={s} does not conform to delim={delim} for cfg_import_constrained'
+    ref = s[len(delim) :].strip()
+
+    parent_key_path, current_key = os.path.split(key_path.replace('.', os.sep))
+    namespace_dir = os.path.join(config_path, parent_key_path)
+    sys.path.insert(0, namespace_dir)
+
+    try:
+        namespace = importlib.import_module(namespace_key)
+    except ImportError as e:
+        raise ImportError(
+            f'Could not import namespace={namespace_key} from {namespace_dir}'
+        ) from e
+
+    if not hasattr(namespace, current_key):
+        raise AttributeError(
+            f'Namespace {namespace_key} does not have attribute {current_key}'
+        )
+
+    string_to_obj_translation_getter = getattr(namespace, current_key)
+    if not hasattr(string_to_obj_translation_getter, 'get'):
+        raise AttributeError(
+            f'{current_key} in namespace {namespace_key} needs'
+            ' __get__ method but does not have one'
+        )
+
+    try:
+        res = string_to_obj_translation_getter.get(ref)
+        sys.path.pop(0)
+        return res
+    except Exception as e:
+        raise e
+
+
 def clean_kwargs(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
@@ -638,6 +679,51 @@ def exec_imports(
                         msg = f'Error importing {v} at {full_key}\n{e}'
                         raise ImportError(msg)
 
+    return d
+
+def get_hydra_config_path_name():
+    cfg = hydra.core.hydra_config.HydraConfig.get()
+    config_name = cfg.job.config_name
+    config_path = [path["path"] for path in cfg.runtime.config_sources if path["schema"] == "file"][0]
+    return config_path, config_name
+
+def exec_imports_constrained(
+    d: DotDict,
+    *,
+    config_path=None,
+    delim='^',
+    namespace_key='namespace',
+    ignore_spaces=True,
+):
+    if config_path is None:
+        config_path, _ = get_hydra_config_path_name()
+        
+    q = [('', d)]
+
+    while q:
+        prefix, curr = q.pop(0)
+        for k, v in curr.items():
+            if isinstance(v, (DotDict, dict)):
+                q.append((f'{prefix}.{k}' if prefix else k, v))
+            elif isinstance(v, str):
+                if ignore_spaces:
+                    v = v.replace(' ', '').replace('\t', '')
+                if v.startswith(delim) and delim in v:
+                    full_key = f'{prefix}.{k}' if prefix else k
+                    try:
+                        d[full_key] = cfg_import_constrained(
+                            v,
+                            key_path=full_key,
+                            config_path=config_path,
+                            delim=delim,
+                            namespace_key=namespace_key,
+                        )
+                    except Exception as e:
+                        msg = (
+                            f'Error during constrained importing {v} at'
+                            f' {full_key}\n{e}'
+                        )
+                        raise ImportError(msg) from e
     return d
 
 
