@@ -6,6 +6,7 @@ import random
 import sys
 from functools import wraps
 from typing import Any, Iterable, get_type_hints
+import inspect
 
 import hydra
 import yaml
@@ -58,6 +59,27 @@ def gen_items(obj: Any) -> Iterable:
         return enumerate(obj)
     else:
         raise ValueError(f'Object {obj} is neither a list nor a dictionary')
+
+
+class TraceError(Exception):
+    def __init__(self, obj, msg, stack_trace=False):
+        super().__init__(msg)
+        self.msg = msg + '\n' + f'See {inspect.getfile(obj)} for more info'
+        if stack_trace:
+            self.msg += '\nStack trace below' + str(inspect.stack())
+
+    def __str__(self):
+        return self.msg
+
+
+class TieredError(Exception):
+    def __init__(self, passed_locals, msg, severity=0):
+        super().__init__(msg)
+        self.msg = msg + '\n' + f'locals in call: {passed_locals}\n'
+        self.severity = severity
+
+    def __str__(self):
+        return self.msg
 
 
 class DotDict:
@@ -505,42 +527,85 @@ def cfg_import(s, *, root=None, delim='|'):
 
 
 def cfg_import_constrained(
-    s, *, key_path, config_path, delim="^", namespace_key="namespace"
+    s,
+    *,
+    key_path,
+    config_path,
+    delim="^",
+    namespace_key="namespace",
+    verbose=False,
 ):
-    assert s.startswith(
-        delim
-    ), f's={s} does not conform to delim={delim} for cfg_import_constrained'
+    """
+    Imports a constrained module attribute based on a key path and reference string.
+
+    YAML example:
+      a:
+         b:
+            c:
+               d:
+                  __call__: ^key
+
+    Navigation rules:
+      - '^key' or '^.key' (one dot) use the current module directory.
+      - '^..key' uses one level upward.
+      - '^...key' uses two levels upward, and so on.
+    """
+    if not s.startswith(delim):
+        raise ValueError(
+            f"s={s} does not conform to delim={delim} for"
+            " cfg_import_constrained"
+        )
+
     ref = s[len(delim) :].strip()
+    dot_count = 0
+    while ref.startswith("."):
+        dot_count += 1
+        ref = ref[1:]
+    up_levels = dot_count - 1 if dot_count > 0 else 0
 
-    parent_key_path, current_key = os.path.split(key_path.replace('.', os.sep))
-    namespace_dir = os.path.join(config_path, parent_key_path)
-    sys.path.insert(0, namespace_dir)
+    # must now start with an letter
+    if not ref[0].isalpha():
+        raise TieredError(
+            locals(),
+            f'Invalid ref={ref} full string={s}...possible overload of'
+            ' constrained and unconstrained import keys',
+            severity=0,
+        )
 
-    try:
-        namespace = importlib.import_module(namespace_key)
-    except ImportError as e:
+    key_parts = key_path.split(".")
+    if len(key_parts) < up_levels + 1:
+        raise ValueError(
+            "Up-level count exceeds available key parts in key_path"
+        )
+
+    base_parts = key_parts[: len(key_parts) - 1 - up_levels]
+    attr_chain = key_parts[len(base_parts) :]
+
+    namespace_dir = os.path.join(config_path, *base_parts, namespace_key)
+    init_path = os.path.join(namespace_dir, "__init__.py")
+    spec = importlib.util.spec_from_file_location(namespace_key, init_path)
+    if spec is None or spec.loader is None:
         raise ImportError(
-            f'Could not import namespace={namespace_key} from {namespace_dir}'
-        ) from e
-
-    if not hasattr(namespace, current_key):
-        raise AttributeError(
-            f'Namespace {namespace_key} does not have attribute {current_key}'
+            f"Could not load module '{namespace_key}' from {init_path}"
         )
 
-    string_to_obj_translation_getter = getattr(namespace, current_key)
-    if not hasattr(string_to_obj_translation_getter, 'get'):
-        raise AttributeError(
-            f'{current_key} in namespace {namespace_key} needs'
-            ' __get__ method but does not have one'
-        )
+    ns = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(ns)
 
-    try:
-        res = string_to_obj_translation_getter.get(ref)
-        sys.path.pop(0)
-        return res
-    except Exception as e:
-        raise e
+    obj = ns
+    for attr in attr_chain:
+        if not hasattr(obj, attr):
+            raise TraceError(
+                obj,
+                f"Module '{namespace_key}' in '{namespace_dir}' lacks attribute"
+                f" '{attr}'",
+            )
+        obj = getattr(obj, attr)
+    if not hasattr(obj, "get"):
+        raise TraceError(
+            obj, f"Final object '{attr_chain[-1]}' requires a 'get' method."
+        )
+    return obj.get(ref)
 
 
 def clean_kwargs(func):
@@ -681,11 +746,17 @@ def exec_imports(
 
     return d
 
+
 def get_hydra_config_path_name():
     cfg = hydra.core.hydra_config.HydraConfig.get()
     config_name = cfg.job.config_name
-    config_path = [path["path"] for path in cfg.runtime.config_sources if path["schema"] == "file"][0]
+    config_path = [
+        path["path"]
+        for path in cfg.runtime.config_sources
+        if path["schema"] == "file"
+    ][0]
     return config_path, config_name
+
 
 def exec_imports_constrained(
     d: DotDict,
@@ -694,10 +765,11 @@ def exec_imports_constrained(
     delim='^',
     namespace_key='namespace',
     ignore_spaces=True,
+    verbose=False
 ):
     if config_path is None:
         config_path, _ = get_hydra_config_path_name()
-        
+
     q = [('', d)]
 
     while q:
@@ -718,9 +790,16 @@ def exec_imports_constrained(
                             delim=delim,
                             namespace_key=namespace_key,
                         )
+                    except TieredError as e:
+                        
+                        if e.severity == 0:
+                            if verbose: 
+                                print(f'Warning: {e}',file=sys.stderr)
+                        else:
+                            raise e
                     except Exception as e:
                         msg = (
-                            f'Error during constrained importing {v} at'
+                            f'Unexpected error during constrained importing {v} at'
                             f' {full_key}\n{e}'
                         )
                         raise ImportError(msg) from e
@@ -1135,3 +1214,62 @@ def enforce_types(func):
         return func(*args, **kwargs)
 
     return wrapper
+
+
+class StaticClass(type):
+    def __new__(cls, name, bases, namespace):
+        for k, v in namespace.items():
+            if callable(v) and not k.startswith("__"):
+                namespace[k] = staticmethod(v)
+        return super().__new__(cls, name, bases, namespace)
+
+
+class AutoStatic(metaclass=StaticClass):
+    _allowed_special = {"__call__", "__init__"}
+
+    @classmethod
+    def _is_valid_attr(cls, name: str) -> bool:
+        return (not name.startswith("_")) or (name in cls._allowed_special)
+
+    @classmethod
+    def get(cls, key: str):
+        available = {
+            name: getattr(cls, name)
+            for name in dir(cls)
+            if cls._is_valid_attr(name)
+        }
+        if key in available:
+            return available[key]
+        elif key.startswith("_"):
+            raise TraceError(
+                cls,
+                f"Attribute '{key}' is invalid. Only the following special"
+                f" attributes are allowed: {sorted(cls._allowed_special)}."
+                " Ensure you have not misspelled a special method.",
+            )
+        else:
+            raise TraceError(
+                cls, f"Attribute '{key}' not found in {cls.__name__}."
+            )
+
+
+def build_local_getters(ns, omit=None):
+    if omit is None:
+        omit = []
+    return {
+        name: getattr(obj, 'get')
+        for name, obj in ns.items()
+        if name not in omit and isinstance(obj, type) and hasattr(obj, 'get')
+    }
+
+
+def build_module_getter_callback(ns, omit=None):
+    getters = build_local_getters(ns, omit=omit)
+
+    def helper(key):
+        if key in getters:
+            return getters[key]
+        else:
+            raise TraceError(ns, f"Key '{key}' not found in {ns.__name__}.")
+
+    return helper
