@@ -4,15 +4,14 @@ import inspect
 import os
 import random
 import sys
+import traceback
 from functools import wraps
 from typing import Any, Iterable, get_type_hints
-import inspect
 
 import hydra
 import yaml
 from hydra import compose, initialize
 from omegaconf import OmegaConf
-import traceback
 
 
 def dict_dump(d, max_length=160):
@@ -1346,6 +1345,7 @@ def build_module_getter_callback(ns, omit=None):
 
     return helper
 
+
 class Tee:
     def __init__(self, outputs=None, mode="w"):
         """
@@ -1364,7 +1364,11 @@ class Tee:
                 outputs = [outputs]
             # For each target in the list, if it's a string, open the file; otherwise assume it’s a file-like object.
             self.outputs = [
-                open(target, mode) if isinstance(target, (str, bytes)) else target
+                (
+                    open(target, mode)
+                    if isinstance(target, (str, bytes))
+                    else target
+                )
                 for target in outputs
             ]
         # Save the original stdout and stderr.
@@ -1388,6 +1392,7 @@ class Tee:
         A helper class that wraps an original stream (stdout or stderr) and duplicates writes to
         all configured outputs via the parent Tee instance.
         """
+
         def __init__(self, parent, stream):
             self.parent = parent
             self.stream = stream
@@ -1433,6 +1438,7 @@ class Tee:
         :param outputs: List of targets (strings or file handles). If None, no tee occurs.
         :param mode: Mode used if any target is a string (filename).
         """
+
         def decorator(func):
             @wraps(func)
             def wrapper(*args, **kwargs):
@@ -1441,7 +1447,9 @@ class Tee:
                     return func(*args, **kwargs)
                 with Tee(outputs, mode):
                     return func(*args, **kwargs)
+
             return wrapper
+
         return decorator
 
     @staticmethod
@@ -1451,24 +1459,28 @@ class Tee:
         It looks for cfg.dupe. If cfg.dupe is truthy, it wraps the function call within a Tee context
         that duplicates output to the specified target(s). If cfg.dupe is None/false, it runs normally.
         """
+
         @wraps(func)
         def wrapper(cfg, *args, **kwargs):
             dupe = getattr(cfg, "dupe", None)
             if not dupe:
                 return func(cfg, *args, **kwargs)
             # Normalize dupe into a list if it's a string/file handle.
-            if isinstance(dupe, str):
-                if not dupe.startswith('/'):
-                    dupe = hydra_out(dupe)
-                outputs = [dupe]
-            elif isinstance(dupe, bytes):
-                outputs = [dupe]
-            else:
-                outputs = dupe
+            outputs = dupe
+            if isinstance(outputs, (str, bytes)):
+                outputs = [outputs]
+            for i, e in enumerate(outputs):
+                if isinstance(e, str) and not e.startswith('/'):
+                    outputs[i] = hydra_out(e)
+
             with Tee(outputs):
+
                 def exit_msg():
-                    files = '\n    '.join([e for e in outputs if isinstance(e, str)])
+                    files = '\n    '.join(
+                        [e for e in outputs if isinstance(e, str)]
+                    )
                     return f'Output for {str(func)} written to\n    {files}'
+
                 try:
                     res = func(cfg, *args, **kwargs)
                     print(exit_msg())
@@ -1477,5 +1489,5 @@ class Tee:
                     traceback.print_exc()
                     print(exit_msg())
                     raise e
-                
+
         return wrapper
