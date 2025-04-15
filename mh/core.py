@@ -12,6 +12,7 @@ import hydra
 import yaml
 from hydra import compose, initialize
 from omegaconf import OmegaConf
+import traceback
 
 
 def dict_dump(d, max_length=160):
@@ -298,6 +299,10 @@ class DotDict:
                                 "\nAttempted debug info with subkey resolution"
                                 f" below\n{sub_msg}"
                             )
+                            msg += (
+                                "\n\nFull"
+                                f" preview={DotDict.summarize_keys(self)}\n\n"
+                            )
 
                             if not relax:
                                 raise AttributeError(msg)
@@ -316,7 +321,9 @@ class DotDict:
             msg = (
                 f"Max passes ({max_passes}) reached. self_ref_resolve failed."
                 " Debug info"
-                f" below.\n{self.get_self_ref_subdict(self_key=self_key)=}"
+                " below."
+                f"\nDirect key preview: {DotDict.summarize_keys(self)}\n"
+                f"\n{self.get_self_ref_subdict(self_key=self_key)=}"
             )
             if not relax:
                 raise ValueError(msg)
@@ -428,6 +435,60 @@ class DotDict:
             )
 
     @staticmethod
+    def summarize_keys(data, indent=0):
+        """
+        Recursively generate a YAML-style summary of keys and list indices,
+        omitting large content and only displaying the structure.
+        """
+        lines = []
+        indent_str = "  " * indent
+
+        if isinstance(data, dict) or isinstance(data, DotDict):
+            for key, value in data.items():
+                # Print the key
+                lines.append(f"{indent_str}{key}:")
+                # If the value is a dictionary, summarize its keys recursively
+                if isinstance(value, dict) or isinstance(value, DotDict):
+                    lines.append(DotDict.summarize_keys(value, indent + 1))
+                # If the value is a list, iterate each element
+                elif isinstance(value, list):
+                    for idx, item in enumerate(value):
+                        # Only recurse into elements that are dict-like
+                        if isinstance(item, dict) or isinstance(item, DotDict):
+                            lines.append(f"{indent_str}  [{idx}]:")
+                            lines.append(
+                                DotDict.summarize_keys(item, indent + 2)
+                            )
+                        else:
+                            # For non-dict list items, simply indicate their type
+                            lines.append(
+                                f"{indent_str}  [{idx}]:"
+                                f" (\033[31m{type(item).__name__}\033[0m)"
+                            )
+                else:
+                    # For non-dict and non-list values, indicate their type
+                    if len(lines) > 0:
+                        lines[-1] += f" (\033[31m{type(value).__name__}\033[0m)"
+
+        elif isinstance(data, list):
+            # If the top-level data is a list, iterate its elements.
+            for idx, item in enumerate(data):
+                lines.append(f"{indent_str}[{idx}]:")
+                if (
+                    isinstance(item, dict)
+                    or isinstance(item, list)
+                    or isinstance(item, DotDict)
+                ):
+                    lines.append(DotDict.summarize_keys(item, indent + 1))
+                else:
+                    lines.append(f"{indent_str}  ({type(item).__name__})")
+        else:
+            # If not a dict or list, simply show the type.
+            lines.append(f"{indent_str}({type(data).__name__})")
+
+        return "\n".join(lines)
+
+    @staticmethod
     def indent_keys(tokens, level=1, indent_str='    ', sep='\n'):
         indenter = sep + indent_str * level
         return indenter + indenter.join(tokens)
@@ -534,6 +595,7 @@ def cfg_import_constrained(
     delim="^",
     namespace_key="namespace",
     verbose=False,
+    ignore_numeric_keys=True,
 ):
     """
     Imports a constrained module attribute based on a key path and reference string.
@@ -555,7 +617,6 @@ def cfg_import_constrained(
             f"s={s} does not conform to delim={delim} for"
             " cfg_import_constrained"
         )
-
     ref = s[len(delim) :].strip()
     dot_count = 0
     while ref.startswith("."):
@@ -578,8 +639,20 @@ def cfg_import_constrained(
             "Up-level count exceeds available key parts in key_path"
         )
 
+    def apply_special_cases(arr):
+        call_case = lambda x: x if not x.startswith("__call") else "__call__"
+        special_cases = [call_case]
+        for case in special_cases:
+            arr = [case(e) for e in arr]
+        if ignore_numeric_keys:
+            arr = [e for e in arr if not e.isnumeric()]
+        return arr
+
     base_parts = key_parts[: len(key_parts) - 1 - up_levels]
     attr_chain = key_parts[len(base_parts) :]
+
+    base_parts = apply_special_cases(base_parts)
+    attr_chain = apply_special_cases(attr_chain)
 
     namespace_dir = os.path.join(config_path, *base_parts, namespace_key)
     init_path = os.path.join(namespace_dir, "__init__.py")
@@ -765,7 +838,7 @@ def exec_imports_constrained(
     delim='^',
     namespace_key='namespace',
     ignore_spaces=True,
-    verbose=False
+    verbose=False,
 ):
     if config_path is None:
         config_path, _ = get_hydra_config_path_name()
@@ -791,16 +864,15 @@ def exec_imports_constrained(
                             namespace_key=namespace_key,
                         )
                     except TieredError as e:
-                        
                         if e.severity == 0:
-                            if verbose: 
-                                print(f'Warning: {e}',file=sys.stderr)
+                            if verbose:
+                                print(f'Warning: {e}', file=sys.stderr)
                         else:
                             raise e
                     except Exception as e:
                         msg = (
-                            f'Unexpected error during constrained importing {v} at'
-                            f' {full_key}\n{e}'
+                            'Unexpected error during constrained importing'
+                            f' {v} at {full_key}\n{e}'
                         )
                         raise ImportError(msg) from e
     return d
@@ -1273,3 +1345,137 @@ def build_module_getter_callback(ns, omit=None):
             raise TraceError(ns, f"Key '{key}' not found in {ns.__name__}.")
 
     return helper
+
+class Tee:
+    def __init__(self, outputs=None, mode="w"):
+        """
+        Initialize a Tee context manager.
+
+        :param outputs: A list (or a single string/file handle) of targets to duplicate output.
+                        If None, then no duplication occurs.
+        :param mode: Mode to open files passed as strings.
+        """
+        # Normalize outputs: if None, we use an empty list (i.e. no duplication).
+        if outputs is None:
+            self.outputs = []
+        else:
+            # If a single string or bytes is given, make it a list.
+            if isinstance(outputs, (str, bytes)):
+                outputs = [outputs]
+            # For each target in the list, if it's a string, open the file; otherwise assume it’s a file-like object.
+            self.outputs = [
+                open(target, mode) if isinstance(target, (str, bytes)) else target
+                for target in outputs
+            ]
+        # Save the original stdout and stderr.
+        self.stdout = sys.stdout
+        self.stderr = sys.stderr
+
+    def write(self, stream, data):
+        # Write to the original stream.
+        stream.write(data)
+        # Write to each target.
+        for out in self.outputs:
+            out.write(data)
+
+    def flush(self, stream):
+        stream.flush()
+        for out in self.outputs:
+            out.flush()
+
+    class TeeStream:
+        """
+        A helper class that wraps an original stream (stdout or stderr) and duplicates writes to
+        all configured outputs via the parent Tee instance.
+        """
+        def __init__(self, parent, stream):
+            self.parent = parent
+            self.stream = stream
+
+        def write(self, data):
+            self.parent.write(self.stream, data)
+
+        def flush(self):
+            self.parent.flush(self.stream)
+
+        def __getattr__(self, attr):
+            # Delegate attribute access to the underlying stream.
+            return getattr(self.stream, attr)
+
+    def __enter__(self):
+        # If there are no outputs to duplicate to, do nothing.
+        if not self.outputs:
+            return self
+        # Save original streams.
+        self._saved_stdout = sys.stdout
+        self._saved_stderr = sys.stderr
+        # Replace sys.stdout and sys.stderr with TeeStream instances.
+        sys.stdout = Tee.TeeStream(self, self.stdout)
+        sys.stderr = Tee.TeeStream(self, self.stderr)
+        return self
+
+    def __exit__(self, exc_type, exc_val, traceback):
+        # Restore original streams if we replaced them.
+        if self.outputs:
+            sys.stdout = self._saved_stdout
+            sys.stderr = self._saved_stderr
+            # Close any targets we opened (but not if they are the original streams).
+            for out in self.outputs:
+                if out not in (self.stdout, self.stderr):
+                    out.close()
+
+    @staticmethod
+    def tee_output(outputs, mode="w"):
+        """
+        A decorator factory that wraps a function so that its output is duplicated
+        to the specified outputs while it runs.
+
+        :param outputs: List of targets (strings or file handles). If None, no tee occurs.
+        :param mode: Mode used if any target is a string (filename).
+        """
+        def decorator(func):
+            @wraps(func)
+            def wrapper(*args, **kwargs):
+                if outputs is None:
+                    # No duplication; run normally.
+                    return func(*args, **kwargs)
+                with Tee(outputs, mode):
+                    return func(*args, **kwargs)
+            return wrapper
+        return decorator
+
+    @staticmethod
+    def hydra_tee(func):
+        """
+        A decorator for Hydra-style functions with signature func(cfg, ...).
+        It looks for cfg.dupe. If cfg.dupe is truthy, it wraps the function call within a Tee context
+        that duplicates output to the specified target(s). If cfg.dupe is None/false, it runs normally.
+        """
+        @wraps(func)
+        def wrapper(cfg, *args, **kwargs):
+            dupe = getattr(cfg, "dupe", None)
+            if not dupe:
+                return func(cfg, *args, **kwargs)
+            # Normalize dupe into a list if it's a string/file handle.
+            if isinstance(dupe, str):
+                if not dupe.startswith('/'):
+                    dupe = hydra_out(dupe)
+                outputs = [dupe]
+            elif isinstance(dupe, bytes):
+                outputs = [dupe]
+            else:
+                outputs = dupe
+            with Tee(outputs):
+                def exit_msg():
+                    files = '\n    '.join([e for e in outputs if isinstance(e, str)])
+                    return f'Output for {str(func)} written to\n    {files}'
+                try:
+                    res = func(cfg, *args, **kwargs)
+                    print(exit_msg())
+                    return res
+                except Exception as e:
+                    traceback.print_exc()
+                    print(exit_msg())
+                    raise e
+                
+        return wrapper
