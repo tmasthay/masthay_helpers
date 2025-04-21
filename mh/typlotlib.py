@@ -332,6 +332,16 @@ def count_frames(gif_path):
         return frame_count
 
 
+def pause_frames(frames, pause_counts):
+    extended = []
+    for i, frame in enumerate(frames):
+        extended.append(frame)
+        n = pause_counts.get(i, 0)
+        if n > 0:
+            extended.extend([frame] * n)
+    return extended
+
+
 def save_frames(
     frames,
     *,
@@ -341,6 +351,7 @@ def save_frames(
     verbose=False,
     loop=0,
     verify_frame_count=False,
+    pauses=None,
 ):
     target_frame_count = len(frames)
     if len(frames) == 0:
@@ -350,12 +361,14 @@ def save_frames(
     name = name.replace(f".{movie_format}", "")
     plot_name = f'{os.path.join(dir, name)}.{movie_format}'
     if verbose:
-        print(f"Creating GIF at {plot_name} ...", end="")
+        print(f"\033[91mCreating GIF at {plot_name} ...\033[0m", end="")
 
     kw = {'duration': duration, 'loop': loop}
     kw = {k: v for k, v in kw.items() if v is not None}
     if movie_format.upper() == "PDF":
         kw = {}
+
+    frames = pause_frames(frames, pauses) if pauses else frames
     frames[0].save(
         plot_name,
         format=movie_format.upper(),
@@ -368,6 +381,8 @@ def save_frames(
         plot_name = plot_name.replace(f'.{movie_format}', '')
         final_name = f'{plot_name}.{movie_format}'
         true_count = count_frames(final_name)
+        pauses_add = sum(pauses.values()) if pauses else 0
+        target_frame_count += pauses_add
         if true_count != target_frame_count:
             # raise warning
             warnings.warn(

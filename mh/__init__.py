@@ -11,6 +11,11 @@ from .core import *
 from .core_legacy import *
 from .errors import *
 from .import_env import *
-from .jupyter import *
+
+try:
+    from .jupyter import *
+except Exception as e:
+    print(f"Jupyter import failed: {e}")
+    print("Jupyter features will be unavailable.")
 from .typlotlib import *
 from .typlotlib_legacy import *

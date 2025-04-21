@@ -197,16 +197,16 @@ class DotDict:
             return d[k]
         keys = k.split('.')
         for i, key in enumerate(keys):
-            d = d[key]
-            # try:
-            # except KeyError as e:
-            #     partial_key = '.'.join(keys[:(i+1)])
-            #     msg = (
-            #         f'KeyError {e} found\n\n'
-            #         f'Error getting {k}@{partial_key} from DotDict with keys below\n\n'
-            #         f'{DotDict.indent_keys(self.flat_keys())}'
-            #     )
-            #     raise AttributeError(msg)
+            try:
+                d = d[key]
+            except KeyError as e:
+                partial_key = '.'.join(keys[: (i + 1)])
+                msg = (
+                    f'KeyError {e} found\n\nError getting'
+                    f' {k}@{partial_key} from DotDict with keys'
+                    f' below\n\n{DotDict.indent_keys(self.flat_keys())}'
+                )
+                raise AttributeError(msg)
         return d
 
     def deep_set(self, k, v):
