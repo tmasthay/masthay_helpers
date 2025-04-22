@@ -197,6 +197,12 @@ class DotDict(dict):
         else:
             raise KeyError(f"Key {k} not found in DotDict.")
         
+    def pop(self, k, default):
+        if k in self.__dict__:
+            return self.__dict__.pop(k)
+        else:
+            return default
+        
     def deep_pop(self, k):
         d = self.__dict__
         if type(k) != str:
