@@ -82,7 +82,7 @@ class TieredError(Exception):
         return self.msg
 
 
-class DotDict:
+class DotDict(dict):
     def __init__(self, d=None, self_ref_resolve=False, deep=False):
         if isinstance(d, DotDict):
             self.__init__(
@@ -190,6 +190,31 @@ class DotDict:
 
     def __repr__(self):
         return self.str()
+    
+    def pop(self, k):
+        if k in self.__dict__:
+            return self.__dict__.pop(k)
+        else:
+            raise KeyError(f"Key {k} not found in DotDict.")
+        
+    def deep_pop(self, k):
+        d = self.__dict__
+        if type(k) != str:
+            return d.pop(k)
+        keys = k.split('.')
+        for i, key in enumerate(keys):
+            try:
+                d = d[key]
+            except KeyError as e:
+                partial_key = '.'.join(keys[: (i + 1)])
+                msg = (
+                    f'KeyError {e} found\n\nError getting'
+                    f' {k}@{partial_key} from DotDict with keys'
+                    f' below\n\n{DotDict.indent_keys(self.flat_keys())}'
+                )
+                raise AttributeError(msg)
+        return d.pop(keys[-1])
+        
 
     def deep_get(self, k):
         d = self.__dict__
