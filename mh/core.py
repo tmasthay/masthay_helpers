@@ -191,15 +191,14 @@ class DotDict(dict):
     def __repr__(self):
         return self.str()
     
-    def pop(self, k):
+    class NonePop(object):
+        pass
+    
+    def pop(self, k, default=NonePop):
         if k in self.__dict__:
             return self.__dict__.pop(k)
-        else:
+        elif type(default) is DotDict.NonePop:
             raise KeyError(f"Key {k} not found in DotDict.")
-        
-    def pop(self, k, default):
-        if k in self.__dict__:
-            return self.__dict__.pop(k)
         else:
             return default
         
@@ -1522,3 +1521,6 @@ class Tee:
                     raise e
 
         return wrapper
+
+def vscode(f):
+    os.system(f'$(which code) {f}')
